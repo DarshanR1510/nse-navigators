@@ -14,7 +14,7 @@ RUN_EVEN_WHEN_MARKET_IS_CLOSED = os.getenv("RUN_EVEN_WHEN_MARKET_IS_CLOSED", "fa
 USE_MANY_MODELS = os.getenv("USE_MANY_MODELS", "false").strip().lower() == "true"
 
 names = ["Warren", "George", "Ray", "Cathie"]
-lastnames = ["Patience", "Bold", "Systematic", "Crypto"]
+lastnames = ["Patience", "Bold", "Systematic", "Growth"]
 
 if USE_MANY_MODELS:
     model_names = ["gpt-4.1-mini", "deepseek-chat", "gemini-2.5-flash-preview-05-20", "gpt-4o-mini"]

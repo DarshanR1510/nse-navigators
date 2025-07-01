@@ -156,8 +156,7 @@ class Account(BaseModel):
 
         for symbol, quantity in self.holdings.items():
             price = prices.get(symbol.upper(), 0.0)
-            total_value += price * quantity
-            print(f"Calculating value for {symbol}: {quantity} shares at {price} each.")
+            total_value += price * quantity            
         return total_value
 
 
