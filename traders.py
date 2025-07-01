@@ -1,14 +1,15 @@
+import os
+import json
 from contextlib import AsyncExitStack
-from mcp_tools.accounts_client import read_accounts_resource, read_strategy_resource
-from utils.tracers import make_trace_id
+from accounts_client import read_accounts_resource, read_strategy_resource
+from tracers import make_trace_id
 from agents import Agent, Tool, Runner, OpenAIChatCompletionsModel, trace
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
-import os
-import json
 from agents.mcp import MCPServerStdio
-from trade_agents.templates import researcher_instructions, trader_instructions, trade_message, rebalance_message, research_tool
-from mcp_tools.mcp_params import trader_mcp_server_params, researcher_mcp_server_params
+from templates import researcher_instructions, trader_instructions, trade_message, rebalance_message, research_tool
+from mcp_params import trader_mcp_server_params, researcher_mcp_server_params
+
 load_dotenv(override=True)
 
 
@@ -26,7 +27,7 @@ gemini_client = AsyncOpenAI(base_url=GEMINI_BASE_URL, api_key=google_api_key)
 
 
 def get_model(model_name: str):
-    if "/" in model_name:
+    if "gemini" in model_name:
         return OpenAIChatCompletionsModel(model=model_name, openai_client=gemini_client)
     elif "deepseek" in model_name:
         return OpenAIChatCompletionsModel(model=model_name, openai_client=deepseek_client)

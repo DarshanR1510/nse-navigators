@@ -1,10 +1,10 @@
-import gradio as gr
-from ui.util import css, js, Color
-import pandas as pd
+from util import css, js, Color
 from trading_floor import names, lastnames, short_model_names
+from accounts import Account
+from database import DatabaseQueries
+import gradio as gr
+import pandas as pd
 import plotly.express as px
-from trade_agents.accounts import Account
-from data.database import DatabaseQueries
 
 mapper = {
     "trace": Color.WHITE,
@@ -20,7 +20,7 @@ class Trader:
     def __init__(self, name: str, lastname: str, model_name: str):
         self.name = name
         self.lastname = lastname
-        self.model_name = model_name.replace(" mini", "")
+        self.model_name = model_name
         self.account = Account.get(name)
 
     def reload(self):

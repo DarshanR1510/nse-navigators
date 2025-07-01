@@ -2,7 +2,7 @@ from dhanhq import dhanhq
 import os
 import time
 from dotenv import load_dotenv
-from data.database import DatabaseQueries
+from database import DatabaseQueries
 import requests
 import threading
 
