@@ -1,0 +1,47 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+env/
+ENV/
+venv/
+*.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SQLite database files
+*.db
+*.csv
+
+# Node.js/Playwright/Puppeteer
+node_modules/
+playwright-report/
+*.log
+
+# Secrets and config
+.env.*
+secrets.*
+*.pem
+*.key
+
+# Cache
+.cache/
+*.cache
+
+# Misc
+*.bak
+*.ipynb
