@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "NSE Navigators is an intelligent multi-agent trading system featuring four specialized AI agents that autonomously research, analyze, and trade Indian stocks. The first agent scouts market opportunities through news analysis and trend identification, while subsequent agents perform comprehensive financial, fundamental, and technical analysis using integrated MCP tools and servers. Each agent operates with distinct trading strategies and risk management protocols, executing trades based on their specialized decision-making frameworks. The entire process unfolds through an intuitive live dashboard where users can monitor real-time agent activities, trade executions, and portfolio performance. This fully autonomous system eliminates manual intervention while providing complete transparency and control over AI-driven investment decisions."
 readme = "README.md"
 authors = [
-    { name = "Darshan Ramani", email = "Darshan.ramani15@gmail.com"
-    }]
+    { name = "Darshan Ramani", email = "Darshan.ramani15@gmail.com" }
+    ]
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.49.0",

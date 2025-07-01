@@ -1,4 +1,4 @@
-from accounts import Account
+from trade_agents.accounts import Account
 
 alice_strategy = """You are an aggressive day-trader.
 You hunt for great opportunities and you take decisive action.
