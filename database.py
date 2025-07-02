@@ -23,7 +23,7 @@ with sqlite3.connect(DB) as conn:
     ''')
     cursor.execute('CREATE TABLE IF NOT EXISTS market (date TEXT PRIMARY KEY, data TEXT)')
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS shares (
+        CREATE TABLE IF NOT EXISTS scripts (
             EXCH_ID TEXT,
             SEGMENT TEXT,
             SECURITY_ID TEXT,
@@ -41,7 +41,7 @@ with sqlite3.connect(DB) as conn:
     conn.commit()
 
 ##! Test query in terminal:
-##* sqlite3 accounts.db "SELECT * FROM shares WHERE UNDERLYING_SYMBOL is 'BBOX';"
+##* sqlite3 accounts.db "SELECT * FROM scripts WHERE UNDERLYING_SYMBOL is 'BBOX';"
 
 
 # --- QUERY CLASS ---

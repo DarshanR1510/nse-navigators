@@ -3,9 +3,9 @@ import csv
 from database import DB
 
 
-def import_shares_from_csv(csv_path: str):
+def import_scripts_from_csv(csv_path: str):
     """
-    Import filtered trading shares data from a CSV file into the shares table.
+    Import filtered trading scripts data from a CSV file into the scripts table.
     Only rows with SEGMENT == 'E' and only selected columns are inserted.
     Args:
         csv_path (str): Path to the CSV file.
@@ -31,13 +31,13 @@ def import_shares_from_csv(csv_path: str):
         ]
     with sqlite3.connect(DB) as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM shares")
+        cursor.execute("DELETE FROM scripts")
         cursor.executemany('''
-            INSERT INTO shares VALUES (
+            INSERT INTO scripts VALUES (
                 ?,?,?,?,?,?,?,?,?,?,?,?
             )
         ''', rows)
         conn.commit()
 
 if __name__ == "__main__":
-    import_shares_from_csv("./api-scrip-master-detailed.csv")
+    import_scripts_from_csv("./api-scrip-master-detailed.csv")

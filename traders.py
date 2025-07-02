@@ -45,8 +45,7 @@ async def get_researcher(mcp_servers, model_name) -> Agent:
     return researcher
 
 
-async def get_researcher_tool(mcp_servers, model_name) -> Tool:
-    print(f"Research tool has been called")
+async def get_researcher_tool(mcp_servers, model_name) -> Tool:    
     researcher = await get_researcher(mcp_servers, model_name)
     return researcher.as_tool(
             tool_name="Researcher",
