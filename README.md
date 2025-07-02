@@ -29,6 +29,7 @@
 - **Robust Engineering:**
   - Global, thread-safe price cache (5-min TTL, 1-sec API rate limit compliance).
   - End-to-end error handling, async best practices, and modular project structure.
+  - Radis integration for fast, in-memory symbol resolution and caching.
 
 ---
 
