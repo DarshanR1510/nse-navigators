@@ -1,7 +1,7 @@
-from util import css, js, Color
+from src.util import css, js, Color
 from trading_floor import names, lastnames, short_model_names
-from accounts import Account
-from database import DatabaseQueries
+from src.accounts import Account
+from src.database import DatabaseQueries
 import gradio as gr
 import pandas as pd
 import plotly.express as px
