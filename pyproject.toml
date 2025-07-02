@@ -25,6 +25,7 @@ dependencies = [
     "pypdf>=5.4.0",
     "pypdf2>=3.0.1",
     "python-dotenv>=1.0.1",
+    "redis>=5.0.0",
     "requests>=2.32.3",
     "semantic-kernel>=1.25.0",
     "sendgrid>=6.11.0",

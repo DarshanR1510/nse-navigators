@@ -3,8 +3,12 @@ from database import DatabaseQueries
 from market import is_market_open, get_symbol_history_daily_data, get_symbol_history_intraday_data, get_symbol_ohlc, get_symbol_price_impl
 from market_indicators import closing_sma, closing_ema, closing_macd, closing_rsi
 from scraper import get_latest_structured_financial
+import redis
 
 mcp = FastMCP("market_server")
+
+# Redis connection (default localhost:6379)
+r = redis.Redis(host='localhost', port=6379, db=0)
 
 
 symbol_index = {}
@@ -32,25 +36,27 @@ async def check_is_market_open() -> bool:
 
 @mcp.tool()
 async def resolve_symbol(company_query: str) -> str:
-    """This tool resolves a company name or symbol to its underlying symbol."""
+    """This tool resolves a company name or symbol to its underlying symbol using Redis cache."""
     query = company_query.lower().strip()
-    
-    # Fast exact match
-    if query in symbol_index:
-        return symbol_index[query]
-    if query in name_index:
-        return name_index[query]
-    if query in display_index:
-        return display_index[query]
-    
-    # Fallback: partial match (still O(n))
-    for row in DatabaseQueries.get_scripts_name_symbols():
-        if query in row["UNDERLYING_SYMBOL"].lower():
-            return row["UNDERLYING_SYMBOL"]
-        if query in row["SYMBOL_NAME"].lower():
-            return row["UNDERLYING_SYMBOL"]
-        if query in row["DISPLAY_NAME"].lower():
-            return row["UNDERLYING_SYMBOL"]
+    symbol = r.hget('symbol_index', query)
+    if symbol:
+        return symbol.decode()
+    symbol = r.hget('name_index', query)
+    if symbol:
+        return symbol.decode()
+    symbol = r.hget('display_index', query)
+    if symbol:
+        return symbol.decode()
+    # Fallback: partial match (O(n) over Redis hash keys)
+    for key in r.hkeys('symbol_index'):
+        if query in key.decode():
+            return r.hget('symbol_index', key).decode()
+    for key in r.hkeys('name_index'):
+        if query in key.decode():
+            return r.hget('name_index', key).decode()
+    for key in r.hkeys('display_index'):
+        if query in key.decode():
+            return r.hget('display_index', key).decode()
     return None
 
 
