@@ -1,4 +1,4 @@
-from market import get_symbol_history_daily_data
+from market_tools.market import get_symbol_history_daily_data
 
 def extract_close_list(data_json: dict) -> list:
     try:

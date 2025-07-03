@@ -1,10 +1,14 @@
-from util import css, js, Color
+from utils.util import css, js, Color
 from trading_floor import names, lastnames, short_model_names
-from accounts import Account
-from database import DatabaseQueries
+from data.accounts import Account
+from data.database import DatabaseQueries
 import gradio as gr
 import pandas as pd
 import plotly.express as px
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 mapper = {
     "trace": Color.WHITE,
@@ -154,4 +158,5 @@ def create_ui():
 
 if __name__ == "__main__":
     ui = create_ui()
-    ui.launch(inbrowser=True, share=True)
+    share_ui = os.getenv("UI_SHARE", "False").lower() == "true"
+    ui.launch(inbrowser=True, share=share_ui)

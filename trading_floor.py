@@ -1,9 +1,9 @@
-from traders import Trader
+from trade_agents.traders import Trader
 from typing import List
 import asyncio
-from tracers import LogTracer
+from trade_agents.tracers import LogTracer
 from agents import add_trace_processor
-from market import is_market_open
+from market_tools.market import is_market_open
 from dotenv import load_dotenv
 import os
 

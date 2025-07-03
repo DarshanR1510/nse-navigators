@@ -1,5 +1,5 @@
 from agents import TracingProcessor, Trace, Span
-from database import DatabaseQueries
+from data.database import DatabaseQueries
 import secrets
 import string
 

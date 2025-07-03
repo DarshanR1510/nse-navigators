@@ -1,6 +1,6 @@
 import sqlite3
 import csv
-from database import DB
+from data.database import DB
 
 
 def import_scripts_from_csv(csv_path: str):
