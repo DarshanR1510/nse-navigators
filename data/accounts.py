@@ -2,8 +2,8 @@ from pydantic import BaseModel
 import json
 from dotenv import load_dotenv
 from datetime import datetime
-from database import DatabaseQueries
-from market import get_symbol_price_impl, get_prices_with_cache
+from data.database import DatabaseQueries
+from market_tools.market import get_symbol_price_impl, get_prices_with_cache
 import time
 
 load_dotenv(override=True)

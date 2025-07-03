@@ -1,8 +1,8 @@
 from mcp.server.fastmcp import FastMCP
-from database import DatabaseQueries
-from market import is_market_open, get_symbol_history_daily_data, get_symbol_history_intraday_data, get_symbol_ohlc, get_symbol_price_impl
-from market_indicators import closing_sma, closing_ema, closing_macd, closing_rsi
-from scraper import get_latest_structured_financial
+from data.database import DatabaseQueries
+from market_tools.market import is_market_open, get_symbol_history_daily_data, get_symbol_history_intraday_data, get_symbol_ohlc, get_symbol_price_impl
+from market_tools.market_indicators import closing_sma, closing_ema, closing_macd, closing_rsi
+from market_tools.scraper import get_latest_structured_financial
 import redis
 
 mcp = FastMCP("market_server")
