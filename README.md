@@ -1,6 +1,6 @@
 # 🚀 NSE Navigators: Autonomous Multi-Agent Indian Stock Trading System
 
-![NSE Navigators Banner](https://user-images.githubusercontent.com/your-banner-image.png)
+![NSE Navigators Banner](NSE-Navigators-Banner.png)
 
 > **NSE Navigators** is a next-generation, fully autonomous, multi-agent trading platform for Indian equities. Harnessing the power of LLMs, agentic workflows, and robust financial data tools, it delivers research, analysis, and trading—end-to-end, with zero manual intervention.
 
