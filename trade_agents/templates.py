@@ -64,9 +64,10 @@ def trader_instructions(name: str):
         **Available Tools:**
         * **Researcher Tool:** To research online for news and opportunities.
         * **Financial Data Tools:** Access to real-time stock prices, comprehensive financial data, and technical indicators. {note}
-        * **Trade Execution Tools:** To buy and sell stocks using your account name {name}.
-        * **Entity Tools:** As a persistent memory to store and recall information; you share this memory with other traders and can benefit from collective group knowledge.
+        * **Trade Execution Tools:** All buy/sell/close actions must use the unified trade_execution toolset, which ensures risk management and portfolio updates. Do not call account or position methods directly.
+        * **Entity Tools:** You have access to your persistent memory, which includes your current positions, watchlist, and daily context. Use this information to inform your trading decisions and to review your past actions.
 
+        
         **Trading Principles:**
         * **Analysis First:** Use your tools to carry out thorough research and analysis before making decisions.
         * **Pre-Trade Simulation:** Before executing a significant trade, use the `simulate_trade` tool to understand potential outcomes and risks. Consider scenarios like "what if this trade goes wrong by X%?"
@@ -99,7 +100,7 @@ def trader_instructions(name: str):
         """
 
 
-def trade_message(name, strategy, account):
+def trade_message(name, strategy, account, positions, watchlist, context):
     return f"""Based on your investment strategy, you should now look for new opportunities.
         Use the research tool to find news and opportunities consistent with your strategy.
         **For Technical Traders (e.g., Carol):** Consider filtering opportunities based on historical volatility. Focus on stocks where your technical indicators are most likely to be effective.
@@ -119,6 +120,12 @@ def trade_message(name, strategy, account):
         {strategy}
         Here is your current account:
         {account}
+        Here are your current positions:
+        {positions}
+        Here is your current watchlist:
+        {watchlist}
+        Here is your current context:
+        {context}
         Here is the current datetime:
         {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         Now, carry out analysis, make your decision and execute trades. Your account name is {name}.
@@ -128,7 +135,7 @@ def trade_message(name, strategy, account):
         """
 
 
-def rebalance_message(name, strategy, account):
+def rebalance_message(name, strategy, account, positions, watchlist, context):
     return f"""Based on your investment strategy, you should now examine your portfolio and decide if you need to rebalance.
         Use the research tool to find news and opportunities affecting your existing portfolio.
         Use the fundamental_scraper tool to analyze the financial health of your current holdings.
@@ -138,12 +145,18 @@ def rebalance_message(name, strategy, account):
         Finally, make your decision, then execute trades using the tools as needed.
         You do not need to identify new investment opportunities at this time; you will be asked to do so later.
         Just rebalance your portfolio based on your strategy as needed.
+        You also have a tool to change your strategy if you wish; you can decide at any time that you would like to evolve or even switch your strategy.
         
         Your investment strategy:
         {strategy}
-        You also have a tool to change your strategy if you wish; you can decide at any time that you would like to evolve or even switch your strategy.
         Here is your current account:
         {account}
+        Here are your current positions:
+        {positions}
+        Here is your current watchlist:
+        {watchlist}
+        Here is your current context:
+        {context}
         Here is the current datetime:
         {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         Now, carry out analysis, make your decision and execute trades. Your account name is {name}.

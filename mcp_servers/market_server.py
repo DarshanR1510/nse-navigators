@@ -1,14 +1,10 @@
 from mcp.server.fastmcp import FastMCP
 from data.database import DatabaseQueries
-from market_tools.market import is_market_open, get_symbol_history_daily_data, get_symbol_history_intraday_data, get_symbol_ohlc, get_symbol_price_impl
-from market_tools.market_indicators import closing_sma, closing_ema, closing_macd, closing_rsi
-from market_tools.scraper import get_latest_structured_financial
-import redis
+from market_tools import market 
+from market_tools.technical_tools import closing_sma, closing_ema, closing_macd, closing_rsi
+from market_tools.fundamental_tools import get_latest_structured_financial
 
 mcp = FastMCP("market_server")
-
-# Redis connection (default localhost:6379)
-r = redis.Redis(host='localhost', port=6379, db=0)
 
 
 symbol_index = {}
@@ -31,47 +27,27 @@ except Exception as e:
 @mcp.tool()
 async def check_is_market_open() -> bool:
     """This tool checks if the market is open for the given stock symbol."""
-    return is_market_open()
+    return market.is_market_open()
 
 
 @mcp.tool()
 async def resolve_symbol(company_query: str) -> str:
     """This tool resolves a company name or symbol to its underlying symbol using Redis cache."""
-    query = company_query.lower().strip()
-    symbol = r.hget('symbol_index', query)
-    if symbol:
-        return symbol.decode()
-    symbol = r.hget('name_index', query)
-    if symbol:
-        return symbol.decode()
-    symbol = r.hget('display_index', query)
-    if symbol:
-        return symbol.decode()
-    # Fallback: partial match (O(n) over Redis hash keys)
-    for key in r.hkeys('symbol_index'):
-        if query in key.decode():
-            return r.hget('symbol_index', key).decode()
-    for key in r.hkeys('name_index'):
-        if query in key.decode():
-            return r.hget('name_index', key).decode()
-    for key in r.hkeys('display_index'):
-        if query in key.decode():
-            return r.hget('display_index', key).decode()
-    return None
+    return market.resolve_symbol_impl(company_query)
 
 
 @mcp.tool()
 async def get_symbol_price(symbol: str) -> float:
     """This tool provides the current price of the given stock symbol.
     This tool requires a valid symbol. Always use resolve_symbol first if you have a company name."""
-    return get_symbol_price_impl(symbol)
+    return market.get_symbol_price_impl(symbol)
 
 
 @mcp.tool()
 async def get_share_ohlc(symbol: str) -> dict:
     """This tool provides the OHLC (Open, High, Low, Close) data for the given stock symbol.
     This tool requires a valid symbol. Always use resolve_symbol first if you have a company name."""
-    return get_symbol_ohlc(symbol)
+    return market.get_symbol_ohlc(symbol)
 
 
 @mcp.tool()
@@ -80,7 +56,7 @@ async def get_share_history_daily_data(
 ) -> dict:
     """This tool provides historical data for the given stock symbol between specified dates.
     This tool requires a valid symbol. Always use resolve_symbol first if you have a company name."""
-    return get_symbol_history_daily_data(symbol, from_date, to_date)
+    return market.get_symbol_history_daily_data(symbol, from_date, to_date)
 
 
 @mcp.tool()
@@ -89,7 +65,7 @@ async def get_share_history_intraday_data(
 ) -> dict:
     """This tool provides intraday historical data for the given stock symbol.
     This tool requires a valid symbol. Always use resolve_symbol first if you have a company name."""
-    return get_symbol_history_intraday_data(symbol, interval, from_date, to_date)
+    return market.get_symbol_history_intraday_data(symbol, interval, from_date, to_date)
 
 
 @mcp.tool()

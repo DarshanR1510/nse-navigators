@@ -2,11 +2,16 @@ import os
 import json
 from contextlib import AsyncExitStack
 from mcp_servers.accounts_client import read_accounts_resource, read_strategy_resource
+from memory.agent_memory import AgentMemory
 from trade_agents.tracers import make_trace_id
 from agents import Agent, Tool, Runner, OpenAIChatCompletionsModel, trace
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 from agents.mcp import MCPServerStdio
+from risk_management.position_manager import PositionManager
+from trade_execution import execute_buy, execute_sell, execute_stop_loss
+import redis
+from dataclasses import asdict
 from trade_agents.templates import researcher_instructions, trader_instructions, trade_message, rebalance_message, research_tool
 from mcp_servers.mcp_params import trader_mcp_server_params, researcher_mcp_server_params
 
@@ -59,7 +64,51 @@ class Trader:
         self.lastname = lastname
         self.agent = None
         self.model_name = model_name
-        self.do_trade = True
+        self.do_trade = True   
+        self.agent_memory = AgentMemory(self.name)
+        self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        self.position_manager = PositionManager(
+            agent_name=self.name,
+            redis_client=self.redis_client,         
+        )
+        # Account object is loaded on demand via MCP or direct DB, not stored persistently here
+
+    async def trade(self, symbol: str, entry_price: float, stop_loss: float, target: float, quantity: int = None, rationale: str = "", position_type: str = "LONG", sector: str = None):
+        """
+        Unified trade execution using trade_execution.py
+        """
+        from data.accounts import Account
+        account = Account.get(self.name)
+        result = execute_buy(
+            agent_name=self.name,
+            account=account,
+            position_manager=self.position_manager,
+            symbol=symbol,
+            entry_price=entry_price,
+            stop_loss=stop_loss,
+            target=target,
+            quantity=quantity,
+            rationale=rationale,
+            position_type=position_type,
+            sector=sector
+        )
+        await self.after_trade(result)
+        return result
+
+    async def close_position(self, symbol: str, execution_price: float, rationale: str = "Close position"):
+        from data.accounts import Account
+        account = Account.get(self.name)
+        result = execute_sell(
+            agent_name=self.name,
+            account=account,
+            position_manager=self.position_manager,
+            symbol=symbol,
+            quantity=self.position_manager.positions[symbol].quantity if symbol in self.position_manager.positions else 0,
+            rationale=rationale,
+            execution_price=execution_price
+        )
+        await self.after_trade(result)
+        return result
 
 
     async def create_agent(self, trader_mcp_servers, researcher_mcp_servers) -> Agent:
@@ -80,12 +129,43 @@ class Trader:
         account_json.pop("portfolio_value_time_series", None)
         return json.dumps(account_json)
 
+    async def after_trade(self, trade_details: dict):        
+        self.agent_memory.log_trade(trade_details)        
+        positions_dict = {symbol: asdict(pos) for symbol, pos in self.position_manager.positions.items()}
+        self.agent_memory.store_active_positions(positions_dict)        
+        context = {"summary": "Trade executed", "details": trade_details}
+        self.agent_memory.store_daily_context(context)
+
+    async def before_decision(self):        
+        context = self.agent_memory.get_daily_context()
+        positions = self.agent_memory.get_active_positions()
+        watchlist = self.agent_memory.get_watchlist()
+        return {
+            "context": context,
+            "positions": positions,
+            "watchlist": watchlist
+        }
+    
 
     async def run_agent(self, trader_mcp_servers, researcher_mcp_servers):
         self.agent = await self.create_agent(trader_mcp_servers, researcher_mcp_servers)
         account = await self.get_account_report()
         strategy = await read_strategy_resource(self.name)
-        message = trade_message(self.name, strategy, account) if self.do_trade else rebalance_message(self.name, strategy, account)
+        memory_context = await self.before_decision()
+
+        message = trade_message(
+        self.name, strategy, account,
+        positions=memory_context["positions"],
+        watchlist=memory_context["watchlist"],
+        context=memory_context["context"]
+    ) if self.do_trade else rebalance_message(
+        self.name, strategy, account,
+        positions=memory_context["positions"],
+        watchlist=memory_context["watchlist"],
+        context=memory_context["context"]
+    )
+        
+
         await Runner.run(self.agent, message, max_turns=MAX_TURNS)
 
 

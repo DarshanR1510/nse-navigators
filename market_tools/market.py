@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from data.database import DatabaseQueries
 import requests
 import threading
+import redis
 
 # Global cache for prices
 _PRICE_CACHE = {
@@ -12,8 +13,9 @@ _PRICE_CACHE = {
     "timestamp": 0
 }
 _CACHE_TTL = 300  # 5 minutes
-
 _CACHE_LOCK = threading.Lock()
+
+r = redis.Redis(host='localhost', port=6379, db=0)
 
 load_dotenv(override=True)
 
@@ -41,8 +43,40 @@ def is_market_open() -> bool:
     
 
 def get_security_id(symbol: str) -> int:
-    """Fetches security_id of given exchange and underlying script."""
+    """Fetches security_id for a given symbol, first from Redis, then DB as fallback."""
+    # Try Redis first
+    sec_id = r.hget('security_id_index', symbol.upper())
+    if sec_id:
+        try:
+            return int(sec_id)
+        except Exception:
+            pass
+    # Fallback to DB
     return int(DatabaseQueries.get_security_id(symbol))
+
+
+def resolve_symbol_impl(company_query: str) -> str:
+    query = company_query.lower().strip()
+    symbol = r.hget('symbol_index', query)
+    if symbol:
+        return symbol.decode()
+    symbol = r.hget('name_index', query)
+    if symbol:
+        return symbol.decode()
+    symbol = r.hget('display_index', query)
+    if symbol:
+        return symbol.decode()
+    # Fallback: partial match
+    for key in r.hkeys('symbol_index'):
+        if query in key.decode():
+            return r.hget('symbol_index', key).decode()
+    for key in r.hkeys('name_index'):
+        if query in key.decode():
+            return r.hget('name_index', key).decode()
+    for key in r.hkeys('display_index'):
+        if query in key.decode():
+            return r.hget('display_index', key).decode()
+    return None
 
 
 def get_symbol_ohlc(symbol: str) -> dict:
@@ -201,7 +235,7 @@ def get_symbol_history_intraday_data(
 
 
 # Example usage
-# security_id =   get_security_id("RELIANCE")
+security_id =   get_security_id("RELIANCE")
 # ohlc_data =     (time.sleep(1) or get_symbol_ohlc("RELIANCE"))
 # last_price =    (time.sleep(1) or get_symbol_price_impl("RELIANCE"))
 # daily_data =    (time.sleep(1) or get_symbol_history_daily_data("RELIANCE", "2025-06-24", "2025-06-25"))
@@ -210,7 +244,7 @@ def get_symbol_history_intraday_data(
 
 
 # print(f"Is Market Open: {is_market_open()}", flush=True)
-# print(f"Security ID: {security_id}", flush=True)
+print(f"Security ID: {security_id}", flush=True)
 # print(f"OHLC Data: {ohlc_data}", flush=True)
 # print(f"Last Price: {last_price}", flush=True)
 # print(f"Daily Data: {daily_data}", flush=True)
