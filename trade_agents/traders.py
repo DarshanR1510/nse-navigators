@@ -8,10 +8,9 @@ from agents import Agent, Tool, Runner, OpenAIChatCompletionsModel, trace
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 from agents.mcp import MCPServerStdio
-from risk_management.position_manager import PositionManager
-from trade_execution import execute_buy, execute_sell, execute_stop_loss
-import redis
+from risk_management.trade_execution import execute_buy, execute_sell
 from dataclasses import asdict
+from utils.redis_client import main_redis_client
 from trade_agents.templates import researcher_instructions, trader_instructions, trade_message, rebalance_message, research_tool
 from mcp_servers.mcp_params import trader_mcp_server_params, researcher_mcp_server_params
 
@@ -59,19 +58,17 @@ async def get_researcher_tool(mcp_servers, model_name) -> Tool:
 
 
 class Trader:
-    def __init__(self, name: str, lastname="Trader", model_name="gpt-4o-mini"):
+    def __init__(self, name: str, lastname="Trader", model_name="gpt-4o-mini", position_manager=None):
         self.name = name
         self.lastname = lastname
         self.agent = None
         self.model_name = model_name
-        self.do_trade = True   
-        self.agent_memory = AgentMemory(self.name)
-        self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
-        self.position_manager = PositionManager(
-            agent_name=self.name,
-            redis_client=self.redis_client,         
-        )
-        # Account object is loaded on demand via MCP or direct DB, not stored persistently here
+        self.do_trade = True
+        self.position_manager = position_manager
+        self.position_manager = None 
+        self.stop_loss_manager = None
+        self.agent_memory = AgentMemory(self.name)       
+        self.redis_client = main_redis_client        
 
     async def trade(self, symbol: str, entry_price: float, stop_loss: float, target: float, quantity: int = None, rationale: str = "", position_type: str = "LONG", sector: str = None):
         """
@@ -79,6 +76,7 @@ class Trader:
         """
         from data.accounts import Account
         account = Account.get(self.name)
+        
         result = execute_buy(
             agent_name=self.name,
             account=account,
@@ -92,6 +90,15 @@ class Trader:
             position_type=position_type,
             sector=sector
         )
+        if result.get("success"):
+            self.stop_loss_manager.set_stop_loss(
+                symbol=symbol,
+                stop_price=stop_loss,
+                quantity=quantity,
+                agent_name=self.name,
+                trailing=True,  # True for trailing
+                trail_percent=20  # set if trailing
+            )
         await self.after_trade(result)
         return result
 

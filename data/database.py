@@ -49,6 +49,22 @@ with sqlite3.connect(DB) as conn:
         )
     ''')
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS indexes (
+            EXCH_ID TEXT,
+            SEGMENT TEXT,
+            SECURITY_ID TEXT,
+            ISIN TEXT,
+            INSTRUMENT TEXT,
+            UNDERLYING_SECURITY_ID TEXT,
+            UNDERLYING_SYMBOL TEXT,
+            SYMBOL_NAME TEXT,
+            DISPLAY_NAME TEXT,
+            INSTRUMENT_TYPE TEXT,
+            SERIES TEXT,
+            LOT_SIZE INTEGER
+        )
+    ''')
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS positions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT,
@@ -261,6 +277,15 @@ class DatabaseQueries:
             cursor.execute('SELECT * FROM closed_positions WHERE AGENT_NAME = ?', (agent_name,))
             rows = cursor.fetchall()
             return [dict(row) for row in rows] if rows else []
+        
+    @staticmethod
+    def get_sectors_ids():
+        with sqlite3.connect(DatabaseQueries.DB) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT SECURITY_ID, UNDERLYING_SYMBOL, SYMBOL_NAME FROM indexes ' \
+            'WHERE INSTRUMENT_TYPE = "SECTOR"')
+            rows = cursor.fetchall()
+            return {row['UNDERLYING_SYMBOL']: row['SECURITY_ID'] for row in rows}
 
 
 if __name__ == "__main__":

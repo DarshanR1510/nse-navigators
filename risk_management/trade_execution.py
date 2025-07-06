@@ -10,12 +10,13 @@ Usage:
     - PositionManager and Account should not directly execute trades; they only provide state and validation.
 
 """
+
 from typing import Optional, Tuple
 from data.accounts import Account
 from risk_management.position_manager import PositionManager
+from datetime import datetime
+from memory.agent_memory import AgentMemory
 
-class TradeExecutionError(Exception):
-    pass
 
 def execute_buy(
     agent_name: str,
@@ -123,11 +124,30 @@ def execute_stop_loss(
     if not position:
         return False, f"No active position for {symbol}"
     quantity = position.quantity
+
     # 2. Sell shares in account
     try:
         account.sell_shares(symbol, quantity, rationale)
     except Exception as e:
         return False, f"Account sell failed: {e}"
+
     # 3. Mark position as stopped out
     position_manager.execute_stop_loss(symbol, execution_price)
+
+    # 4. Agent memory logging (if available)
+    try:
+        agent_memory = AgentMemory(agent_name)
+        trade_details = {
+            "symbol": symbol,
+            "quantity": quantity,
+            "execution_price": execution_price,
+            "timestamp": datetime.now().timestamp(),
+            "type": "stop_loss",
+            "rationale": rationale,
+            "status": "executed"
+        }
+        agent_memory.log_trade(trade_details)
+    except Exception as e:
+        print(f"[WARN] Could not log stop loss trade to agent memory: {e}")
+
     return True, f"Stop loss executed for {symbol} at {execution_price}"

@@ -80,6 +80,10 @@ def trader_instructions(name: str):
         * Regularly review your past trades (both profitable and unprofitable).
         * Analyze the reasons for success or failure to learn and refine your strategy and decision-making over time.
 
+        **Stop Loss Management:**
+        * You have a stop loss watcher that will monitor your positions and trigger stop losses if necessary.
+        * You can also set up trailing stops for your positions to protect profits while allowing for potential upside.        
+
         **Post-Trading Actions:**
         * Once you've completed trading, send a push notification using the push tool with the following exact format:
         * header_message: Must follow this exact format: {name} [bought/sold] [quantity] [stock_symbol] at [price]

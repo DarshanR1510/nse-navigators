@@ -15,42 +15,10 @@ import os
 from dotenv import load_dotenv
 from data.database import DatabaseQueries
 from memory import memory_tools
+from utils.redis_client import main_redis_client
+from data.schemas import Position, RiskLimits
 
 load_dotenv(override=True)
-
-@dataclass
-class Position:
-    """Individual position data structure"""
-    symbol: str
-    quantity: int
-    entry_price: float
-    current_price: float
-    stop_loss: float
-    target: float
-    entry_date: str
-    agent_name: str
-    position_type: str  # "LONG" or "SHORT"
-    reason: str
-    position_size_percent: float
-    unrealized_pnl: float = 0.0
-    realized_pnl: float = 0.0
-    status: str = "ACTIVE"  # ACTIVE, CLOSED, STOPPED_OUT
-
-
-@dataclass
-class RiskLimits:
-    """Risk management configuration"""
-    max_position_size: float = 0.08          # 8% of portfolio per position
-    max_sector_exposure: float = 0.25        # 25% in any sector
-    max_daily_loss: float = 0.02             # 2% daily loss limit
-    max_portfolio_risk: float = 0.15         # 15% total portfolio at risk
-    min_risk_reward: float = 1.5             # Minimum 1:1.5 risk-reward
-    max_correlation: float = 0.7             # Maximum correlation between positions
-    max_open_positions: int = 15             # Maximum open positions
-    max_new_positions_per_day: int = 3       # Maximum new positions per day
-    risk_per_trade: float = 0.02             # 2% portfolio risk per trade
-    emergency_stop_loss: float = 0.05        # 5% daily loss = emergency stop
-
 
 class PositionManager:
     """
@@ -59,7 +27,7 @@ class PositionManager:
     
     def __init__(self, 
                  agent_name: str,
-                 redis_client: redis.Redis,
+                 redis_client: redis.Redis = main_redis_client,
                  portfolio_value: float = os.getenv("INITIAL_BALANCE", 500000.0),
                  risk_limits: Optional[RiskLimits] = None):
         """

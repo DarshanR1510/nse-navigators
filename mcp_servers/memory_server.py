@@ -2,6 +2,7 @@ from mcp.server.fastmcp import FastMCP
 from memory.memory_tools import (
     store_market_context,
     get_market_context,
+    get_overall_market_context,
     add_positions,
     get_positions,
     remove_position,
@@ -24,6 +25,15 @@ async def m_store_market_context(agent_name: str, context: dict):
 async def m_get_market_context(agent_name: str, date: str = None):
     """Get daily market context for the agent."""
     return await get_market_context(agent_name, date)
+
+
+@mcp.tool()
+async def m_get_today_market_context():
+    """
+    Get latest market context such as market regime, sector performance and volatility regime.
+    This can help you make informed trading decisions based on the current market conditions.
+    """
+    return get_overall_market_context()
 
 @mcp.tool()
 async def m_add_positions(agent_name: str, positions: dict):

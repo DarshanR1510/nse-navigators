@@ -143,7 +143,6 @@ async def set_stop_loss_order(symbol: str, stop_price: float,
                              quantity: int, agent_name: str)
 async def check_stop_loss_triggers(agent_name: str)
 async def calculate_portfolio_var(agent_name: str, confidence: float = 0.95)
-async def get_risk_metrics(agent_name: str)
 ```
 
 **Day 14: Integration & Testing**

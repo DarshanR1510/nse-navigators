@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from data.database import DatabaseQueries
 import requests
 import threading
-import redis
+from utils.redis_client import main_redis_client as r
 
 # Global cache for prices
 _PRICE_CACHE = {
@@ -14,8 +14,6 @@ _PRICE_CACHE = {
 }
 _CACHE_TTL = 300  # 5 minutes
 _CACHE_LOCK = threading.Lock()
-
-r = redis.Redis(host='localhost', port=6379, db=0)
 
 load_dotenv(override=True)
 
@@ -162,6 +160,7 @@ def get_multiple_symbol_prices(symbols: list[str]) -> dict[str, float]:
 
     return prices
 
+
 def get_prices_with_cache(symbols: list[str]) -> dict[str, float]:
     """
     Returns cached prices if cache is fresh, otherwise fetches new prices and updates cache.
@@ -182,6 +181,7 @@ def get_prices_with_cache(symbols: list[str]) -> dict[str, float]:
         # Sleep 1 second to respect API rate limit
         time.sleep(1)
         return {s: _PRICE_CACHE["prices"].get(s, 0.0) for s in symbols}
+
 
 def get_symbol_history_daily_data(
         symbol: str,         
@@ -235,7 +235,7 @@ def get_symbol_history_intraday_data(
 
 
 # Example usage
-security_id =   get_security_id("RELIANCE")
+# security_id =   get_security_id("RELIANCE")
 # ohlc_data =     (time.sleep(1) or get_symbol_ohlc("RELIANCE"))
 # last_price =    (time.sleep(1) or get_symbol_price_impl("RELIANCE"))
 # daily_data =    (time.sleep(1) or get_symbol_history_daily_data("RELIANCE", "2025-06-24", "2025-06-25"))
@@ -244,7 +244,7 @@ security_id =   get_security_id("RELIANCE")
 
 
 # print(f"Is Market Open: {is_market_open()}", flush=True)
-print(f"Security ID: {security_id}", flush=True)
+# print(f"Security ID: {security_id}", flush=True)
 # print(f"OHLC Data: {ohlc_data}", flush=True)
 # print(f"Last Price: {last_price}", flush=True)
 # print(f"Daily Data: {daily_data}", flush=True)

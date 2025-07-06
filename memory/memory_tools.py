@@ -1,5 +1,16 @@
 from memory.agent_memory import AgentMemory
-from datetime import datetime, timedelta
+from datetime import datetime
+from utils.redis_client import main_redis_client as r
+import json
+from data.schemas import MarketContext
+
+
+def get_overall_market_context():
+    today = datetime.now().strftime("%Y%m%d")
+    key = f"market:daily_context:{today}"
+    context_dict = json.loads(r.get(key)) if r.exists(key) else None
+    context = MarketContext(**context_dict)
+    return context
 
 
 async def store_market_context(agent_name: str, context: dict):
