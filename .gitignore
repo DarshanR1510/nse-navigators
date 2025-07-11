@@ -6,6 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+agents_data/
+
 # Virtual environments
 .venv/
 env/

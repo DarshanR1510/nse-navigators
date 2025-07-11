@@ -1,7 +1,8 @@
 import sqlite3
 import csv
-from data.database import DB
+# from data.database import DB
 
+DB = "accounts.db"
 
 def import_scripts_from_csv(csv_path: str):
     """
@@ -69,4 +70,4 @@ def import_scripts_from_csv(csv_path: str):
         conn.commit()
 
 if __name__ == "__main__":
-    import_scripts_from_csv("./api-scrip-master-detailed.csv")
+    import_scripts_from_csv("utils/api-scrip-master-detailed.csv")

@@ -13,7 +13,7 @@ cursor.execute("SELECT SECURITY_ID, UNDERLYING_SYMBOL, SYMBOL_NAME, DISPLAY_NAME
 rows = cursor.fetchall()
 
 print(f"Fetched {len(rows)} rows from SQLite.")
-# # Store in Redis
+# Store in Redis
 for security_id, symbol, name, display in rows:
     # Normalize missing values to None or empty string
     security_id = security_id if security_id is not None else ""
