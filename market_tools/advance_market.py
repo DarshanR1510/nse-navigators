@@ -1,5 +1,3 @@
-from dhanhq import dhanhq
-import os
 import time
 from dotenv import load_dotenv
 from typing import Dict, List
@@ -8,13 +6,10 @@ from datetime import datetime, timedelta
 import talib as ta
 import numpy as np
 import pandas as pd
+from utils.dhan_client import dhan
 
 
 load_dotenv(override=True)
-
-client_id = os.getenv("DHAN_CLIENT_ID")
-access_token = os.getenv("DHAN_ACCESS_TOKEN")
-dhan = dhanhq(client_id, access_token)
 
 nifty50_security_id = 13
 india_vix_security_id = 21

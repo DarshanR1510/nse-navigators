@@ -1,5 +1,4 @@
-from dhanhq import dhanhq
-import os
+from utils.dhan_client import dhan
 import time
 from dotenv import load_dotenv
 from data.database import DatabaseQueries
@@ -16,12 +15,6 @@ _CACHE_TTL = 300  # 5 minutes
 _CACHE_LOCK = threading.Lock()
 
 load_dotenv(override=True)
-
-client_id = os.getenv("DHAN_CLIENT_ID")
-access_token = os.getenv("DHAN_ACCESS_TOKEN")
-
-dhan = dhanhq(client_id, access_token)
-
 
 def is_market_open() -> bool:
     NSE_URL = "https://www.nseindia.com/api/marketStatus"
@@ -43,10 +36,10 @@ def is_market_open() -> bool:
 def get_security_id(symbol: str) -> int:
     """Fetches security_id for a given symbol, first from Redis, then DB as fallback."""
     # Try Redis first
-    sec_id = r.hget('security_id_index', symbol.upper())
+    sec_id = r.hget('symbol:' + symbol.lower(), 'security_id')
     if sec_id:
         try:
-            return int(sec_id)
+            return int(sec_id.decode())
         except Exception:
             pass
     # Fallback to DB
@@ -54,26 +47,36 @@ def get_security_id(symbol: str) -> int:
 
 
 def resolve_symbol_impl(company_query: str) -> str:
+    """
+    Given a company query (symbol, name, or display), return the best matching UNDERLYING_SYMBOL.
+    """
     query = company_query.lower().strip()
-    symbol = r.hget('symbol_index', query)
-    if symbol:
-        return symbol.decode()
-    symbol = r.hget('name_index', query)
-    if symbol:
-        return symbol.decode()
-    symbol = r.hget('display_index', query)
-    if symbol:
-        return symbol.decode()
-    # Fallback: partial match
-    for key in r.hkeys('symbol_index'):
-        if query in key.decode():
-            return r.hget('symbol_index', key).decode()
-    for key in r.hkeys('name_index'):
-        if query in key.decode():
-            return r.hget('name_index', key).decode()
-    for key in r.hkeys('display_index'):
-        if query in key.decode():
-            return r.hget('display_index', key).decode()
+    symbol_keys = r.keys('symbol:*')
+
+    # 1. Exact match on symbol
+    for key in symbol_keys:
+        symbol_data = r.hgetall(key)
+        symbol = symbol_data.get(b'symbol', b'').decode().lower()
+        if symbol == query:
+            return symbol_data.get(b'symbol', b'').decode()
+
+    # 2. Exact match on name or display
+    for key in symbol_keys:
+        symbol_data = r.hgetall(key)
+        name = symbol_data.get(b'name', b'').decode().lower()
+        display = symbol_data.get(b'display', b'').decode().lower()
+        if name == query or display == query:
+            return symbol_data.get(b'symbol', b'').decode()
+
+    # 3. Partial match on symbol, name, or display
+    for key in symbol_keys:
+        symbol_data = r.hgetall(key)
+        symbol = symbol_data.get(b'symbol', b'').decode().lower()
+        name = symbol_data.get(b'name', b'').decode().lower()
+        display = symbol_data.get(b'display', b'').decode().lower()
+        if query in symbol or query in name or query in display:
+            return symbol_data.get(b'symbol', b'').decode()
+
     return None
 
 

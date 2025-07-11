@@ -25,9 +25,9 @@ class StopLossManager:
             "stop_price": stop_price,
             "quantity": quantity,
             "agent_name": agent_name,
-            "trailing": trailing,
+            "trailing": str(trailing),
             "trail_percent": trail_percent,
-            "active": True
+            "active": str(True)
         }
         self.redis.hmset(key, stop_loss_data)
 
@@ -36,7 +36,9 @@ class StopLossManager:
         """Check all active stop losses against current prices. Returns list of triggered stops."""
         triggered = []
         for key in self.redis.scan_iter(match="stop_loss:*"):
+            
             data = self.redis.hgetall(key)
+            
             if not data or not data.get(b"active") or data.get(b"active") == b"False":
                 continue
             symbol = data[b"symbol"].decode()
@@ -46,8 +48,10 @@ class StopLossManager:
             trailing = data.get(b"trailing", b"False") == b"True"
             trail_percent = float(data.get(b"trail_percent", b"0") or 0)
             current_price = current_prices.get(symbol)
+            
             if current_price is None:
                 continue
+            
             # Trigger for long only (can extend for short)
             if current_price <= stop_price:
                 triggered.append({

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import json
 from utils.redis_client import redis_client as r
 from data.schemas import MarketContext
+from dataclasses import asdict
 from market_tools.advance_market import get_market_regime, get_sector_performance, get_volatility_regime
 
 async def update_market_context():
@@ -31,7 +32,7 @@ async def update_market_context():
         print(f"Previous market context removed for {prev_day}")
 
 
-    r.set(f"market:daily_context:{today}", json.dumps(context))
+    r.set(f"market:daily_context:{today}", json.dumps(asdict(context)))
     print(f"Market context updated for {today}")
 
 if __name__ == "__main__":

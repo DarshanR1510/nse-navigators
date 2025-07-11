@@ -4,8 +4,8 @@ from data.accounts import Account
 from market_tools.market import get_prices_with_cache
 from market_tools.market import is_market_open
 from memory.agent_memory import AgentMemory
-
-agent_names = ["Warren", "George", "Ray", "Cathie"]
+from trade_agents.orchestrator import agent_names
+from utils.util import bcolors
 all_active_positions = {}
 
 
@@ -18,10 +18,21 @@ def stop_loss_watcher(stop_loss_manager, position_managers, poll_interval=300):
         # 1. Get all active stop-losses
         get_all_active_positions = {
             agent_name: get_active_positions(agent_name)
-            for agent_name in agent_names
-        
+            for agent_name in agent_names        
         }
-        symbols = list({s for (_, s) in get_all_active_positions.keys()})
+
+        # Robust symbol extraction
+        symbols = set()
+        for positions in get_all_active_positions.values():
+            if isinstance(positions, dict):
+                for symbol in positions.keys():
+                    symbols.add(symbol)
+            elif isinstance(positions, list):
+                for pos in positions:
+                    if isinstance(pos, dict) and "symbol" in pos:
+                        symbols.add(pos["symbol"])
+        symbols = list(symbols)
+
         if not symbols:
             time.sleep(poll_interval)
             continue
@@ -31,7 +42,9 @@ def stop_loss_watcher(stop_loss_manager, position_managers, poll_interval=300):
     
         # 3. Check for triggered stops
         triggered = stop_loss_manager.check_stop_losses(current_prices)
-        
+
+        print(f"{bcolors.WARNING}Triggered stop losses: {triggered}{bcolors.ENDC}")        
+
         for stop in triggered:
             symbol = stop["symbol"]
             agent_name = stop["agent_name"]
@@ -49,6 +62,7 @@ def stop_loss_watcher(stop_loss_manager, position_managers, poll_interval=300):
                 account=account,
                 position_manager=position_manager,
                 symbol=symbol,
+                quantity=stop["quantity"],
                 execution_price=price,
                 rationale="Stop loss triggered"
             )
@@ -57,7 +71,6 @@ def stop_loss_watcher(stop_loss_manager, position_managers, poll_interval=300):
             print(f"Stop loss executed for {agent_name} {symbol} at {price}: {result}")
 
         time.sleep(poll_interval)
-
 
 
 def get_active_positions(agent_name):

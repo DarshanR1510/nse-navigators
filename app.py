@@ -1,13 +1,16 @@
 from utils.util import css, js, Color
-from trading_floor import names, lastnames, short_model_names
+from trading_floor import agent_names, lastnames, short_model_names
 from data.accounts import Account
 from data.database import DatabaseQueries
 import gradio as gr
 import pandas as pd
 import plotly.express as px
 import os
+import threading
 from dotenv import load_dotenv
 from memory.agent_memory import AgentMemory
+from market_tools.market import get_security_id
+from market_tools.live_prices import live_prices, data_lock, run_websocket_listener, update_instruments
 
 load_dotenv()
 
@@ -20,6 +23,17 @@ mapper = {
     "account": Color.RED,
 }
 
+all_symbols = set()
+
+for agent_name in agent_names:
+    account = Account.get(agent_name)
+    all_symbols.update(account.get_holdings().keys())
+
+new_instruments = {symbol: get_security_id(symbol) for symbol in all_symbols}
+update_instruments(new_instruments)
+
+listener_thread = threading.Thread(target=run_websocket_listener, daemon=True)
+listener_thread.start()
 
 class Trader:
     def __init__(self, name: str, lastname: str, model_name: str):
@@ -63,13 +77,46 @@ class Trader:
         """Convert holdings to DataFrame for display"""
         holdings = self.account.get_holdings()
         if not holdings:
-            return pd.DataFrame(columns=["Symbol", "Quantity"])
+            return pd.DataFrame(columns=["Symbol", "Quantity", "Live Price"])
         
-        df = pd.DataFrame([
-            {"Symbol": symbol, "Quantity": quantity} 
-            for symbol, quantity in holdings.items()
-        ])
+        rows = []
+        with data_lock:
+            for symbol, quantity in holdings.items():
+                ltp = live_prices.get(symbol, {}).get("LTP", 0.0)
+                prev_ltp = live_prices.get(symbol, {}).get("prev_LTP", ltp)
+                color = mapper.get("function").value if ltp > prev_ltp else (mapper.get("account").value if ltp < prev_ltp else mapper.get("trace").value)                
+                # Use HTML for colored cell
+                price_html = f"<span style='color:{color};font-weight:bold'>{ltp:.2f}</span>"
+                rows.append({
+                    "Symbol": symbol,
+                    "Quantity": quantity,
+                    "Live Price": price_html
+                })
+        df = pd.DataFrame(rows)
         return df
+    
+    def get_holdings_html(self) -> str:
+        holdings = self.account.get_holdings()
+        rows = []
+        with data_lock:
+            for symbol, quantity in holdings.items():
+                ltp = live_prices.get(symbol, {}).get("LTP", 0.0)
+                prev_ltp = live_prices.get(symbol, {}).get("prev_LTP", ltp)
+                color = mapper.get("function").value if ltp > prev_ltp else (mapper.get("account").value if ltp < prev_ltp else mapper.get("trace").value)
+                price_html = f"<span style='color:{color};font-weight:bold'>{ltp:.2f}</span>"
+                rows.append(f"<tr><td>{symbol}</td><td>{quantity}</td><td>{price_html}</td></tr>")
+        # Pad to 5 rows if needed
+        while len(rows) < 5:
+            rows.append("<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>")
+        table_html = (
+            "<div style='max-height:180px;overflow-y:auto;width:100%;'>"
+            "<table style='width:100%;border-collapse:collapse;'>"
+            "<thead><tr style='position:sticky;top:0;background:#222;'><th>Symbol</th><th>Quantity</th><th>Live Price</th></tr></thead>"
+            "<tbody>"
+            + "".join(rows) +
+            "</tbody></table></div>"
+        )
+        return table_html
     
     def get_transactions_df(self) -> pd.DataFrame:
         """Convert transactions to DataFrame for display"""
@@ -121,8 +168,8 @@ class Trader:
         pnl = self.account.calculate_profit_loss(portfolio_value) or 0.0
         color = "green" if pnl >= 0 else "red"
         emoji = "⬆" if pnl >= 0 else "⬇"
-        return f"<div style='text-align: center;background-color:{color};'><span style='font-size:32px'>${portfolio_value:,.0f}</span><span style='font-size:24px'>&nbsp;&nbsp;&nbsp;{emoji}&nbsp;${pnl:,.0f}</span></div>"
-    
+        return f"<div style='text-align: center;background-color:{color};'><span style='font-size:32px'>₹{portfolio_value:,.0f}</span><span style='font-size:24px'>&nbsp;&nbsp;&nbsp;{emoji}&nbsp;₹{pnl:,.0f}</span></div>"
+
     def get_logs(self, previous=None) -> str:
         logs = DatabaseQueries.read_log(self.name, last_n=13)        
         response = ""
@@ -155,16 +202,23 @@ class TraderView:
                 self.chart = gr.Plot(self.trader.get_portfolio_value_chart, container=True, show_label=False)
             with gr.Row(variant="panel"):
                 self.log = gr.HTML(self.trader.get_logs)
+                
+            # with gr.Row():
+            #     self.holdings_table = gr.Dataframe(
+            #         value=self.trader.get_holdings_df,
+            #         label="Holdings",
+            #         headers=["Symbol", "Quantity", "Live Price"],
+            #         row_count=(5, "dynamic"),
+            #         col_count=3,
+            #         max_height=300,
+            #         elem_classes=["dataframe-fix-small"],
+            #         every=1,
+            #         render=True
+            #     )
+
             with gr.Row():
-                self.holdings_table = gr.Dataframe(
-                    value=self.trader.get_holdings_df,
-                    label="Holdings",
-                    headers=["Symbol", "Quantity"],
-                    row_count=(5, "dynamic"),
-                    col_count=2,
-                    max_height=300,
-                    elem_classes=["dataframe-fix-small"]
-                )
+                self.holdings_table = gr.HTML(self.trader.get_holdings_html())
+
             # Memory Status as DataFrames
             mem_dfs = self.trader.get_memory_status_df()
             with gr.Row():
@@ -206,7 +260,7 @@ class TraderView:
                     col_count=5,
                     max_height=300,
                     elem_classes=["dataframe-fix"]
-                )
+                )            
 
         timer = gr.Timer(value=120)
         timer.tick(fn=self.refresh, inputs=[], outputs=[self.portfolio_value, self.chart, self.holdings_table, self.memory_positions, self.memory_watchlist, self.memory_context, self.transactions_table], show_progress="hidden", queue=False)
@@ -230,13 +284,19 @@ class TraderView:
 def create_ui():
     """Create the main Gradio UI for the trading simulation"""
     
-    traders = [Trader(trader_name, lastname, model_name) for trader_name, lastname, model_name in zip(names, lastnames, short_model_names)]    
+    traders = [Trader(trader_name, lastname, model_name) for trader_name, lastname, model_name in zip(agent_names, lastnames, short_model_names)]    
     trader_views = [TraderView(trader) for trader in traders]
   
     with gr.Blocks(title="Traders", css=css, js=js, theme=gr.themes.Default(primary_hue="sky"), fill_width=True) as ui:                
         with gr.Row():
             for trader_view in trader_views:
                 trader_view.make_ui()
+        with gr.Row():
+                    gr.HTML(
+                        "<div style='text-align:center;font-size:16px;color:#888;'>"
+                        "Crafted with expertise and passion by <b>Darshan Ramani</b>."
+                        "</div>"
+                    )
         
     return ui
 

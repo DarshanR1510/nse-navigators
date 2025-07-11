@@ -1,6 +1,35 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Literal
 from datetime import datetime
+from pydantic import BaseModel
+
+class SelectedSymbol(BaseModel):
+    company_name: str
+    """The selected stock company name."""
+    
+    company_symbol: str
+    """The selected stock symbol. You can find company_symbol by using resolve_symbol tool."""
+    
+    reason: str
+    """The reason for selecting this stock. This should be a brief explanation of why this stock
+    was chosen, such as its potential for growth, stability, or alignment with investment strategy."""    
+
+    conviction_score: float
+    """A score representing the level of conviction in this selection, typically on a scale from
+    0 to 1, where 1 indicates high confidence in the stock's potential performance."""
+
+    time_horizon: str
+    """The expected time frame for holding this stock, such as 'short-term', 'medium-term', or 'long-term'.
+    This helps in understanding the investment strategy and expected duration of the position."""
+
+    risk_factors: str
+    """A description of the key risks associated with this stock selection, such as market volatility,
+    sector-specific risks, or company-specific challenges. This helps in assessing the risk profile of the
+    investment and making informed decisions."""
+
+
+class SelectedSymbols(BaseModel):
+    selections: list[SelectedSymbol]
 
 @dataclass
 class Position:
@@ -20,6 +49,17 @@ class Position:
     realized_pnl: float = 0.0
     status: str = "ACTIVE"  # ACTIVE, CLOSED, STOPPED_OUT
 
+@dataclass
+class TradeOrder:
+    agent_name: str
+    symbol: str
+    quantity: int
+    order_type: Literal["BUY", "SELL"]
+    entry_price: float
+    stop_loss: float
+    target: float
+    reason: str
+    position_size_percent: float
 
 @dataclass
 class MarketContext:

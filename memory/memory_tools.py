@@ -8,7 +8,10 @@ from data.schemas import MarketContext
 def get_overall_market_context():
     today = datetime.now().strftime("%Y%m%d")
     key = f"market:daily_context:{today}"
-    context_dict = json.loads(r.get(key)) if r.exists(key) else None
+    raw = r.get(key)
+    if not raw:
+        return None
+    context_dict = json.loads(raw)
     context = MarketContext(**context_dict)
     return context
 

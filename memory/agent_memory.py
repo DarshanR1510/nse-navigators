@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 class AgentMemory:    
-    def __init__(self, agent_name: str, base_path: str = "memory/agents_data"):        
+    def __init__(self, agent_name: str, base_path: str = "agents_data"):        
         self.agent_name = agent_name
         self.base_path = base_path
 

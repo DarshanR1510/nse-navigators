@@ -8,7 +8,7 @@ for the NSE Navigators trading system.
 import json
 import logging
 from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from datetime import datetime
 import redis
 import os
@@ -28,7 +28,7 @@ class PositionManager:
     def __init__(self, 
                  agent_name: str,
                  redis_client: redis.Redis = main_redis_client,
-                 portfolio_value: float = os.getenv("INITIAL_BALANCE", 500000.0),
+                 portfolio_value: float = float(os.getenv("INITIAL_BALANCE", 500000.0)),
                  risk_limits: Optional[RiskLimits] = None):
         """
         Initialize PositionManager
@@ -53,7 +53,8 @@ class PositionManager:
     def calculate_position_size(self, 
                               entry_price: float, 
                               stop_loss: float, 
-                              portfolio_value: Optional[float] = None) -> int:
+                              portfolio_value: Optional[float] = None,
+                              agent_name: str = None) -> int:
         """
         Calculate position size based on risk per trade
         
@@ -65,8 +66,23 @@ class PositionManager:
         Returns:
             Number of shares to buy
         """
-        if portfolio_value is None:
-            portfolio_value = self.portfolio_value
+        try:
+            # Ensure all inputs are floats
+            entry_price = float(entry_price)
+            stop_loss = float(stop_loss)
+            
+            if portfolio_value is None:
+                portfolio_value = float(self.portfolio_value)
+            else:
+                portfolio_value = float(portfolio_value)
+            
+            # Ensure risk limits are floats
+            risk_per_trade = float(self.risk_limits.risk_per_trade)
+            max_position_size = float(self.risk_limits.max_position_size)
+            
+        except (ValueError, TypeError) as e:
+            self.logger.error(f"Type conversion error in calculate_position_size: {e}")
+            return 0
             
         # Calculate risk per share
         risk_per_share = abs(entry_price - stop_loss)
@@ -76,34 +92,34 @@ class PositionManager:
             return 0
             
         # Calculate maximum risk amount
-        max_risk_amount = portfolio_value * self.risk_limits.risk_per_trade
+        max_risk_amount = portfolio_value * risk_per_trade
         
         # Calculate position size
         position_size = int(max_risk_amount / risk_per_share)
         
         # Apply maximum position size limit
-        max_position_value = portfolio_value * self.risk_limits.max_position_size
+        max_position_value = portfolio_value * max_position_size
         max_shares_by_value = int(max_position_value / entry_price)
         
         final_position_size = min(position_size, max_shares_by_value)
         
         self.logger.info(f"Position size calculation: Entry={entry_price}, "
                         f"Stop={stop_loss}, Risk/share={risk_per_share}, "
-                        f"Max risk=${max_risk_amount}, Size={final_position_size}")
+                        f"Max risk=₹{max_risk_amount}, Size={final_position_size}")
         
         return final_position_size
     
     
     def validate_new_position(self, 
-                            symbol: str, 
-                            quantity: int, 
-                            entry_price: float,
-                            stop_loss: float,
-                            agent_name: str,
-                            sector: str = None) -> Tuple[bool, str]:
+                         symbol: str, 
+                         quantity: int, 
+                         entry_price: float,
+                         stop_loss: float,
+                         agent_name: str,
+                         sector: str = None) -> Tuple[bool, str]:
         """
         Validate if a new position can be opened
-        
+
         Args:
             symbol: Stock symbol
             quantity: Number of shares
@@ -111,51 +127,62 @@ class PositionManager:
             stop_loss: Stop loss price
             agent_name: Name of the agent
             sector: Sector of the stock (optional)
-            
+
         Returns:
             Tuple of (is_valid, reason)
         """
+        try:
+            quantity = int(quantity)
+            entry_price = float(entry_price)
+            stop_loss = float(stop_loss)
+            portfolio_value = float(self.portfolio_value)
+        except Exception as e:            
+            return False, f"Type conversion error: {e}"
+
         # Check if position already exists
         if symbol in self.positions and self.positions[symbol].status == "ACTIVE":
             return False, f"Position in {symbol} already exists"
-        
+
         # Check maximum open positions
-        if len(self.positions) >= self.risk_limits.max_open_positions:
+        if len(self.positions) >= self.risk_limits.max_open_positions:            
             return False, f"Maximum open positions limit reached ({self.risk_limits.max_open_positions})"
-        
+
         # Check daily position limit
         today = datetime.now().strftime("%Y-%m-%d")
         daily_positions = self._get_daily_new_positions(today)
-        if len(daily_positions) >= self.risk_limits.max_new_positions_per_day:
+        if len(daily_positions) >= self.risk_limits.max_new_positions_per_day:            
             return False, f"Daily new position limit reached ({self.risk_limits.max_new_positions_per_day})"
-        
+
         # Check position size limits
+        if portfolio_value == 0:            
+            return False, "Portfolio value is zero"
         position_value = quantity * entry_price
-        position_size_percent = position_value / self.portfolio_value
-        
-        if position_size_percent > self.risk_limits.max_position_size:
+        position_size_percent = round(position_value / portfolio_value, 2)
+        if position_size_percent > self.risk_limits.max_position_size:            
             return False, f"Position size ({position_size_percent:.2%}) exceeds limit ({self.risk_limits.max_position_size:.2%})"
-        
+
         # Check risk-reward ratio
         risk_per_share = abs(entry_price - stop_loss)
-        if risk_per_share <= 0:
+        if risk_per_share <= 0:            
             return False, "Invalid stop loss - must be different from entry price"
-        
+
         # Check sector exposure (if sector provided)
         # if sector:
         #     sector_exposure = self._calculate_sector_exposure(sector)
         #     if sector_exposure > self.risk_limits.max_sector_exposure:
+        #         self.logger.warning(f"\033[93m[VALIDATION] Sector exposure ({sector_exposure:.2%}) exceeds limit ({self.risk_limits.max_sector_exposure:.2%})\033[0m")
         #         return False, f"Sector exposure ({sector_exposure:.2%}) exceeds limit ({self.risk_limits.max_sector_exposure:.2%})"
-        
+
         # Check portfolio risk
-        new_risk = (quantity * risk_per_share) / self.portfolio_value
-        if self.total_portfolio_risk + new_risk > self.risk_limits.max_portfolio_risk:
+        new_risk = (quantity * risk_per_share) / portfolio_value
+        if self.total_portfolio_risk + new_risk > self.risk_limits.max_portfolio_risk:            
             return False, f"Portfolio risk would exceed limit ({self.risk_limits.max_portfolio_risk:.2%})"
-        
+
         # Check daily loss limit
-        if self.daily_pnl < -self.portfolio_value * self.risk_limits.max_daily_loss:
+        if self.daily_pnl < -portfolio_value * self.risk_limits.max_daily_loss:
             return False, f"Daily loss limit exceeded ({self.risk_limits.max_daily_loss:.2%})"
-        
+
+        self.logger.info(f"\033[92m[VALIDATION] Position passed validation checks for {symbol}.\033[0m")
         return True, "Position validation passed"
 
 
@@ -196,7 +223,7 @@ class PositionManager:
         
         # Calculate position metrics
         position_value = quantity * entry_price
-        position_size_percent = position_value / self.portfolio_value
+        position_size_percent = round(float(position_value / self.portfolio_value), 2)
         
         # Create position object
         position = Position(
@@ -211,20 +238,22 @@ class PositionManager:
             position_type=position_type,
             reason=reason,
             position_size_percent=position_size_percent,
-            unrealized_pnl=0.0
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            status="ACTIVE"
         )        
         # Add to positions
         self.positions[symbol] = position
         
         # Update portfolio risk
         risk_per_share = abs(entry_price - stop_loss)
-        position_risk = (quantity * risk_per_share) / self.portfolio_value
+        position_risk = (quantity * risk_per_share) / float(self.portfolio_value)
         self.total_portfolio_risk += position_risk
         
         # Save positions
         self._save_positions()
-        self._remove_position_from_memory_file(symbol)        
-        
+        self._save_positions_to_memory_file()
+
         # Cache in Redis
         self._cache_position_in_redis(symbol, position)
         
@@ -232,6 +261,7 @@ class PositionManager:
                         f"(Agent: {agent_name}, Risk: {position_risk:.2%})")
         
         return True, f"Position added successfully: {symbol}"
+
 
 
     def update_position_prices(self, price_data: Dict[str, float]) -> Dict[str, float]:
@@ -582,13 +612,15 @@ class PositionManager:
     def _load_positions(self):
         """Load positions from db"""
         positions_data = DatabaseQueries.load_positions(agent_name=self.agent_name)
+        allowed_fields = {f.name for f in Position.__dataclass_fields__.values()}
         self.positions = {
-            symbol: Position(**data) for symbol, data in positions_data
+            data['symbol']: Position(**{k: v for k, v in data.items() if k in allowed_fields})
+            for data in positions_data
         }
 
         self.total_portfolio_risk = self.calculate_portfolio_risk()
-        for position in self.positions.values():            
-            self._cache_position_in_redis(position.symbol, position)        
+        for position in self.positions.values():
+            self._cache_position_in_redis(position.symbol, position)       
 
 
     def _remove_position(self, symbol: str):

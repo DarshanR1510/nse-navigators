@@ -219,7 +219,7 @@ class DatabaseQueries:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO positions (symbol, quantity, entry_price, current_price, stop_loss, target, entry_date, agent_name, position_type, reason, position_size_percent, unrealized_pnl, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 position['symbol'],
                 position['quantity'],
@@ -240,6 +240,7 @@ class DatabaseQueries:
     @staticmethod
     def load_positions(agent_name: str = None):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM positions WHERE agent_name = ?', (agent_name,))
             rows = cursor.fetchall()
@@ -273,6 +274,7 @@ class DatabaseQueries:
     @staticmethod
     def load_closed_positions(agent_name: str = None):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM closed_positions WHERE AGENT_NAME = ?', (agent_name,))
             rows = cursor.fetchall()
@@ -281,6 +283,7 @@ class DatabaseQueries:
     @staticmethod
     def get_sectors_ids():
         with sqlite3.connect(DatabaseQueries.DB) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT SECURITY_ID, UNDERLYING_SYMBOL, SYMBOL_NAME FROM indexes ' \
             'WHERE INSTRUMENT_TYPE = "SECTOR"')

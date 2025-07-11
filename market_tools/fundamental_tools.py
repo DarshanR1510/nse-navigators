@@ -314,7 +314,7 @@ class ScreenerScraper:
                 button = first_td.find("button")
                 if button:
                     button_text = button.get_text(separator=" ").strip().lower()                    
-                    button_text = re.sub(r'[\xa0\s]+\+$', '', button_text)  # Remove trailing + and spaces
+                    button_text = re.sub(r'[\xa0\s]+\+₹', '', button_text)  # Remove trailing + and spaces
                     button_text = re.sub(r'\s+', ' ', button_text)  # Normalize spaces
                     row_label = button_text.strip()
                 else:
@@ -451,7 +451,7 @@ class ScreenerScraper:
                 else:
                     # fallback to button text if onclick is missing
                     button_text = button.get_text(separator=" ").strip().lower()
-                    button_text = re.sub(r'[\xa0\s]+\+$', '', button_text)  # Remove trailing + and spaces
+                    button_text = re.sub(r'[\xa0\s]+\+₹', '', button_text)  # Remove trailing + and spaces
                     button_text = re.sub(r'\s+', ' ', button_text)  # Normalize spaces
                     group = button_text.strip()
                 
@@ -562,7 +562,7 @@ class ScreenerScraper:
         
         try:
             # Remove currency symbols and commas
-            cleaned = re.sub(r'[₹$,\s%]', '', value_text)
+            cleaned = re.sub(r'[₹,\s%]', '', value_text)
             
             # Handle negative values
             is_negative = '(' in value_text or '-' in cleaned

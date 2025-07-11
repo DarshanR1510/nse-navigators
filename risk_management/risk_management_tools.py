@@ -110,7 +110,7 @@ async def t_calculate_position_size(entry_price: float, stop_loss: float, portfo
     Returns: int (number of shares to buy)
     """
     pm = PositionManager(agent_name=agent_name)
-    return pm.calculate_position_size(entry_price, stop_loss, portfolio_value)
+    return pm.calculate_position_size(entry_price, stop_loss, portfolio_value, agent_name=agent_name)
 
 
 async def t_check_portfolio_exposure(agent_name: str):

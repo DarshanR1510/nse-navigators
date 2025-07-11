@@ -1,22 +1,21 @@
-from pdb import pm
 from typing import Dict, List
 from market_tools.market import get_multiple_symbol_prices
-from risk_management.stop_loss_watcher import get_active_positions
 from trade_agents.traders import Trader
 from memory.agent_memory import AgentMemory
 from memory.memory_tools import get_overall_market_context
 import logging
 from datetime import datetime, time
 from utils.redis_client import main_redis_client
-from risk_management.stop_loss_manager import StopLossManager
-from trading_floor import stop_loss_manager, position_managers
+import asyncio
 
-agent_names = ["Warren", "George", "Ray", "Cathie"]
+agent_names = ["warren", "george", "ray", "cathie"]
+# agent_names = ["warren"]
 all_active_positions = {}
+MAX_TURNS = 30
 
 
 class AgentOrchestrator:
-    def __init__(self, agents: List[Trader]):
+    def __init__(self, agents: List[Trader], stop_loss_manager=None, position_managers=None):
         """
         Initialize the orchestrator with agents and supporting systems.
         
@@ -28,15 +27,21 @@ class AgentOrchestrator:
         self.agents = {agent.name: agent for agent in agents}
         self.redis_client = main_redis_client
         self.logger = logging.getLogger(__name__)
-    
-        self.memory = AgentMemory("orchestrator")
+            
         self.position_manager = {name: pm for name, pm in position_managers.items() if pm is not None}
         self.stop_loss_manager = stop_loss_manager
 
         self.risk_limits = {name: pm.risk_limits for name, pm in position_managers.items() if pm is not None}
 
 
-    def run_daily_context_analysis(self) -> Dict:
+    async def run_traders(self, market_mcp_servers, researcher_mcp_servers):
+        for trader in self.agents.values():
+            await trader.run(market_mcp_servers, researcher_mcp_servers)
+            await asyncio.sleep(2)
+
+    
+
+    def run_daily_context_analysis(self) -> dict:
         """
         Collects each agent's daily context and the current market context, merges them, and performs a simple combined analysis.
         Returns a dict with agent-wise merged context.
