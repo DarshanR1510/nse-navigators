@@ -1,10 +1,10 @@
-from dhanhq import dhanhq
-import os
+from utils.dhan_client import dhan
 import time
 from dotenv import load_dotenv
 from data.database import DatabaseQueries
 import requests
 import threading
+from utils.redis_client import main_redis_client as r
 
 # Global cache for prices
 _PRICE_CACHE = {
@@ -12,16 +12,9 @@ _PRICE_CACHE = {
     "timestamp": 0
 }
 _CACHE_TTL = 300  # 5 minutes
-
 _CACHE_LOCK = threading.Lock()
 
 load_dotenv(override=True)
-
-client_id = os.getenv("DHAN_CLIENT_ID")
-access_token = os.getenv("DHAN_ACCESS_TOKEN")
-
-dhan = dhanhq(client_id, access_token)
-
 
 def is_market_open() -> bool:
     NSE_URL = "https://www.nseindia.com/api/marketStatus"
@@ -41,8 +34,50 @@ def is_market_open() -> bool:
     
 
 def get_security_id(symbol: str) -> int:
-    """Fetches security_id of given exchange and underlying script."""
+    """Fetches security_id for a given symbol, first from Redis, then DB as fallback."""
+    # Try Redis first
+    sec_id = r.hget('symbol:' + symbol.lower(), 'security_id')
+    if sec_id:
+        try:
+            return int(sec_id.decode())
+        except Exception:
+            pass
+    # Fallback to DB
     return int(DatabaseQueries.get_security_id(symbol))
+
+
+def resolve_symbol_impl(company_query: str) -> str:
+    """
+    Given a company query (symbol, name, or display), return the best matching UNDERLYING_SYMBOL.
+    """
+    query = company_query.lower().strip()
+    symbol_keys = r.keys('symbol:*')
+
+    # 1. Exact match on symbol
+    for key in symbol_keys:
+        symbol_data = r.hgetall(key)
+        symbol = symbol_data.get(b'symbol', b'').decode().lower()
+        if symbol == query:
+            return symbol_data.get(b'symbol', b'').decode()
+
+    # 2. Exact match on name or display
+    for key in symbol_keys:
+        symbol_data = r.hgetall(key)
+        name = symbol_data.get(b'name', b'').decode().lower()
+        display = symbol_data.get(b'display', b'').decode().lower()
+        if name == query or display == query:
+            return symbol_data.get(b'symbol', b'').decode()
+
+    # 3. Partial match on symbol, name, or display
+    for key in symbol_keys:
+        symbol_data = r.hgetall(key)
+        symbol = symbol_data.get(b'symbol', b'').decode().lower()
+        name = symbol_data.get(b'name', b'').decode().lower()
+        display = symbol_data.get(b'display', b'').decode().lower()
+        if query in symbol or query in name or query in display:
+            return symbol_data.get(b'symbol', b'').decode()
+
+    return None
 
 
 def get_symbol_ohlc(symbol: str) -> dict:
@@ -128,6 +163,7 @@ def get_multiple_symbol_prices(symbols: list[str]) -> dict[str, float]:
 
     return prices
 
+
 def get_prices_with_cache(symbols: list[str]) -> dict[str, float]:
     """
     Returns cached prices if cache is fresh, otherwise fetches new prices and updates cache.
@@ -148,6 +184,7 @@ def get_prices_with_cache(symbols: list[str]) -> dict[str, float]:
         # Sleep 1 second to respect API rate limit
         time.sleep(1)
         return {s: _PRICE_CACHE["prices"].get(s, 0.0) for s in symbols}
+
 
 def get_symbol_history_daily_data(
         symbol: str,         

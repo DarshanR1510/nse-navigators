@@ -1,0 +1,52 @@
+{
+  "daily_context": {
+    "2025-07-11": {
+      "market_view": {
+        "sentiment": "Innovation-focused",
+        "focus_sectors": [
+          "Technology",
+          "Healthcare",
+          "Fintech"
+        ],
+        "risk_appetite": "Very Aggressive"
+      },
+      "growth_metrics": {
+        "min_revenue_growth": 0.4,
+        "min_tam": 1000000,
+        "innovation_score": 0.8
+      },
+      "position_sizing": {
+        "max_position": 0.1,
+        "conviction_multiplier": 2.0
+      }
+    }
+  },
+  "active_positions": {
+    "HSCL": {
+      "entry_price": 510.05,
+      "quantity": 78,
+      "stop_loss": 470.0,
+      "target": 590.1500000000001,
+      "reason": "Strong fundamental growth, excellent volume accumulation, positive MACD and RSI momentum, aligns with innovation sector focus and bullish market regime.",
+      "entry_date": "2025-07-10 23:35:51"
+    }
+  },
+  "watchlist": {
+    "HDBK": {
+      "reason": "Failed to retrieve financial data. Needs future monitoring."
+    }
+  },
+  "trades": [
+    {
+      "symbol": "HSCL",
+      "quantity": 78,
+      "entry_price": 510.05,
+      "stop_loss": 470.0,
+      "target": 590.1500000000001,
+      "timestamp": 1752170751.38498,
+      "type": "buy",
+      "rationale": "Strong fundamental growth, excellent volume accumulation, positive MACD and RSI momentum, aligns with innovation sector focus and bullish market regime.",
+      "status": "executed"
+    }
+  ]
+}

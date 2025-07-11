@@ -1,3 +1,35 @@
+PROJECT DETAILS:
+
+This project is a robust, multi-agent trading system designed for Indian stock markets. It uses advanced AI agents, each with their own trading strategies (like Warren, George, Ray, and Cathie), to analyze stocks and make buy/sell decisions. All trading actions are managed centrally to ensure safety, consistency, and compliance with risk rules.
+
+The system uses two main types of storage:
+
+Redis for fast, real-time data access (like agent memory and quick lookups)
+SQLite for reliable, long-term storage (like trade history and account records)
+Technical and fundamental analysis tools are built in, including indicators like SMA, EMA, MACD, Bollinger Bands, and RSI. These tools are optimized to give clear, recent, and easy-to-use results for both the AI agents and any large language models (LLMs) that help with decision-making.
+
+Trade execution is fully centralized in a dedicated module, so all agents must go through the same process to place trades. This ensures that risk management, position tracking, and compliance checks are always enforced. There is only one PositionManager per agent, which keeps track of all open trades and positions.
+
+The system is designed for reliability and scalability. It includes strong error handling, detailed logging, and robust data validation to prevent mistakes and make debugging easier. Data is kept in sync between Redis and SQLite, and special care is taken to handle type conversions and edge cases.
+
+Agent instructions and prompts are carefully crafted to get the best results from LLMs, making the system both powerful and cost-effective. Utility functions and batch analysis tools are also made robust and easy to use, so the system can handle large amounts of data and many agents at once.
+
+Overall, this project provides a flexible, safe, and efficient platform for automated stock trading, combining the speed of Redis, the reliability of SQLite, and the intelligence of multiple AI agents—all working together under strict risk controls.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # NSE Navigators: All-in-One Project Plan
 
 ---
