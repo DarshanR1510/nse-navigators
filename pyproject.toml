@@ -34,9 +34,10 @@ dependencies = [
     "smithery>=0.1.0",
     "pydantic",
     "pandas",
-    "dhanhq",    
+    "dhanhq",
     "apscheduler>=3.11.0",
     "scikit-learn>=1.7.0",
     "ipykernel>=6.29.5",
     "websocket-client>=1.8.0",
+    "ta-lib>=0.6.4",
 ]
