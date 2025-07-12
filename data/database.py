@@ -3,6 +3,9 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 import csv
+import pytz
+
+IST = pytz.timezone("Asia/Kolkata")
 
 load_dotenv(override=True)
 
@@ -147,13 +150,13 @@ class DatabaseQueries:
 
     @staticmethod
     def write_log(name: str, type: str, message: str):
-        now = datetime.now().isoformat()
+        now = datetime.now(IST).strftime("%Y-%m-%d:%H:%M:%S")
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO logs (name, datetime, type, message)
-                VALUES (?, datetime('now'), ?, ?)
-            ''', (name.lower(), type, message))
+                VALUES (?, ?, ?, ?)
+            ''', (name.lower(), now, type, message))
             conn.commit()
 
     @staticmethod

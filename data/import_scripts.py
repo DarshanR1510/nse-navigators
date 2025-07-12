@@ -28,7 +28,10 @@ def import_scripts_from_csv(csv_path: str):
                 row['SERIES'],
                 float(row['LOT_SIZE']) if row['LOT_SIZE'] else None
             )
-            for row in reader if row['EXCH_ID'] == 'NSE' and row['INSTRUMENT'] == 'EQUITY'
+            for row in reader 
+            if row['EXCH_ID'] == 'NSE' 
+            and row['INSTRUMENT'] == 'EQUITY'
+            and not any(char.isdigit() for char in row['UNDERLYING_SYMBOL'])
         ]
         index_rows = [
             (

@@ -127,28 +127,11 @@ class Trader:
         return pd.DataFrame(transactions)
     
     def get_memory_status_df(self) -> pd.DataFrame:
-        """Return a DataFrame summarizing agent memory (positions, watchlist, context) for display."""
+        """Return a DataFrame summarizing agent memory (watchlist, context) for display."""
         mem = AgentMemory(self.name)
-        positions = mem.get_active_positions() or {}
         watchlist = mem.get_watchlist() or []
         context = mem.get_daily_context() or {}
-
-        # Positions Table
-        pos_rows = []
-        for symbol, pos in positions.items():
-            row = {"Symbol": symbol}
-            if isinstance(pos, dict):
-                row.update({
-                    "Quantity": pos.get("quantity", "-"),
-                    "Entry Price": pos.get("entry_price", "-"),
-                    "Stop Loss": pos.get("stop_loss", "-"),
-                    "Target": pos.get("target", "-"),
-                    "Reason": pos.get("reason", "-"),
-                    "Entry Date": pos.get("entry_date", "-")
-                })
-            pos_rows.append(row)
-        pos_df = pd.DataFrame(pos_rows) if pos_rows else pd.DataFrame(columns=["Symbol", "Quantity", "Entry Price", "Stop Loss", "Target", "Reason", "Entry Date"])
-
+   
         # Watchlist Table
         watchlist_df = pd.DataFrame(watchlist, columns=["Watchlist"]) if watchlist else pd.DataFrame(columns=["Watchlist"])
 
@@ -160,8 +143,9 @@ class Trader:
         context_df = pd.DataFrame(context_items, columns=["Key", "Value"]) if context_items else pd.DataFrame(columns=["Key", "Value"])
 
         # Combine all as a dict of DataFrames for display
-        return {"Positions": pos_df, "Watchlist": watchlist_df, "Context": context_df}
+        return {"Watchlist": watchlist_df, "Context": context_df}
     
+
     def get_portfolio_value(self) -> str:
         """Calculate total portfolio value based on current prices"""
         portfolio_value = self.account.calculate_portfolio_value() or 0.0
@@ -214,23 +198,15 @@ class TraderView:
             #         elem_classes=["dataframe-fix-small"],
             #         every=1,
             #         render=True
-            #     )
-
+            #     )       
             with gr.Row():
+                gr.HTML("<div style='font-size:18px;font-weight:bold;margin-bottom:4px;'>Current Holdings</div>")     
+            with gr.Row():                
                 self.holdings_table = gr.HTML(self.trader.get_holdings_html())
 
             # Memory Status as DataFrames
             mem_dfs = self.trader.get_memory_status_df()
-            with gr.Row():
-                self.memory_positions = gr.Dataframe(
-                    value=lambda: mem_dfs["Positions"],
-                    label="Memory: Positions",
-                    headers=list(mem_dfs["Positions"].columns) if not mem_dfs["Positions"].empty else [],
-                    row_count=(5, "dynamic"),
-                    col_count=len(mem_dfs["Positions"].columns) if not mem_dfs["Positions"].empty else 0,
-                    max_height=200,
-                    elem_classes=["dataframe-fix-small"]
-                )
+            
             with gr.Row():
                 self.memory_watchlist = gr.Dataframe(
                     value=lambda: mem_dfs["Watchlist"],
@@ -263,7 +239,7 @@ class TraderView:
                 )            
 
         timer = gr.Timer(value=120)
-        timer.tick(fn=self.refresh, inputs=[], outputs=[self.portfolio_value, self.chart, self.holdings_table, self.memory_positions, self.memory_watchlist, self.memory_context, self.transactions_table], show_progress="hidden", queue=False)
+        timer.tick(fn=self.refresh, inputs=[], outputs=[self.portfolio_value, self.chart, self.holdings_table, self.memory_watchlist, self.memory_context, self.transactions_table], show_progress="hidden", queue=False)
         log_timer = gr.Timer(value=0.5)
         log_timer.tick(fn=self.trader.get_logs, inputs=[self.log], outputs=[self.log], show_progress="hidden", queue=False)
 

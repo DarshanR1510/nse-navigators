@@ -1,4 +1,3 @@
-from curses import raw
 import json
 from typing import Dict, Tuple, List
 from datetime import datetime
@@ -38,20 +37,20 @@ def closing_sma_and_slope(symbol: str) -> dict:
     df['sma_50_slope'] = df['sma_50'].diff()
     df['sma_200_slope'] = df['sma_200'].diff()
 
-    lookback = 60
+    lookback = 30
     df_recent = df.tail(lookback).iloc[::-1]    
 
     return {
-        "sma": [
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_20'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_50'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_200'].tolist()],
-        ],
-        "slope": [
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_20_slope'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_50_slope'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_200_slope'].tolist()],
-        ]
+        "sma": {
+            "sma_20": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_20'].tolist()],
+            "sma_50": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_50'].tolist()],
+            "sma_200": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_200'].tolist()],
+        },
+        "slope": {
+            "sma_20_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_20_slope'].tolist()],
+            "sma_50_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_50_slope'].tolist()],
+            "sma_200_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_200_slope'].tolist()],
+        }
     }
 
 
@@ -84,16 +83,16 @@ def closing_ema_and_slope(symbol: str) -> dict:
     df_recent = df.tail(lookback).iloc[::-1]
 
     return {
-        "ema": [
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_20'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_50'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_200'].tolist()],
-        ],
-        "slope": [
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_20_slope'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_50_slope'].tolist()],
-            [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_200_slope'].tolist()],
-        ]
+        "ema": {
+            "ema_20": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_20'].tolist()],
+            "ema_50": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_50'].tolist()],
+            "ema_200": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_200'].tolist()],
+        },
+        "slope": {
+            "ema_20_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_20_slope'].tolist()],
+            "ema_50_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_50_slope'].tolist()],
+            "ema_200_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_200_slope'].tolist()],
+        }
     }
 
 
@@ -120,7 +119,7 @@ def closing_macd(symbol: str, fast_period: int = 12, slow_period: int = 26, sign
         return None
 
     macd, signal, hist = ta.MACD(df['close'], fastperiod=fast_period, slowperiod=slow_period, signalperiod=signal_period)
-    lookback = 60
+    lookback = 30
 
     macd_recent = macd.tail(lookback).iloc[::-1]
     signal_recent = signal.tail(lookback).iloc[::-1]
@@ -184,7 +183,7 @@ def closing_bollinger_bands(symbol: str, period: int = 20, std_dev: float = 2.0)
         return None
 
     upper_band, middle_band, lower_band = ta.BBANDS(df['close'], timeperiod=period, nbdevup=std_dev, nbdevdn=std_dev)
-    lookback = 60
+    lookback = 30
 
     upper_band_recent = upper_band.tail(lookback).iloc[::-1]
     middle_band_recent = middle_band.tail(lookback).iloc[::-1]
@@ -197,7 +196,7 @@ def closing_bollinger_bands(symbol: str, period: int = 20, std_dev: float = 2.0)
     }
 
 
-### ADVANCED TOOLS ###
+# ==================== ADVANCED TOOLS ==================== #
 
 def analyze_volume_patterns(symbol: str) -> dict:
     """
@@ -1615,19 +1614,17 @@ def calculate_support_resistance_levels(symbol: str, bins: int = 15) -> dict:
 
 def momentum_indicators(symbol: str) -> dict:
     """
-    Enhanced momentum analysis with additional indicators and improved signal processing.
+    This function performs an enhanced momentum analysis on the given symbol using multiple technical indicators.
     
-    Major Improvements:
-    1. Added MACD analysis with histogram momentum
-    2. Implemented ADX for trend strength measurement
-    3. Added Aroon oscillator for trend detection
-    4. Improved RSI analysis with divergence detection
-    5. Added Bollinger Band momentum analysis
-    6. Enhanced signal confirmation with multiple timeframes
-    7. Added volume confirmation for momentum signals
-    8. Improved overall scoring system with weighted factors
-    9. Added market regime detection (trending/range-bound)
-    10. Better risk assessment and confidence calculation
+    Major tools:
+    1. Rate of Change (ROC) - Multiple timeframes
+    2. Williams %R - Multiple timeframes
+    3. Stochastic Oscillator - Multiple configurations
+    4. Core Momentum Indicators (RSI, Momentum, CCI, MFI)
+    5. Trend Strength Indicators (ADX, DMI)
+    6. Additional Momentum Indicators (MACD, Aroon)
+    7. Price Momentum Derivatives (Velocity, Acceleration, Log Returns)
+    8. Volume Momentum Indicators (Volume ROC)
     
     Returns:
         dict: {
@@ -1777,7 +1774,10 @@ def momentum_indicators(symbol: str) -> dict:
         
         # Bollinger Bands
         'bb_percent': float(round(df['bb_percent'].iloc[-1], 3)),
-        'bb_width': float(round(df['bb_width'].iloc[-1], 4))
+        'bb_width': float(round(df['bb_width'].iloc[-1], 4)),
+        'bb_upper': float(round(df['bb_upper'].iloc[-1], 2)),
+        'bb_middle': float(round(df['bb_middle'].iloc[-1], 2)),
+        'bb_lower': float(round(df['bb_lower'].iloc[-1], 2))
     }
     
     # ==================== ENHANCED ANALYSIS FUNCTIONS ====================
@@ -2608,7 +2608,7 @@ def momentum_indicators(symbol: str) -> dict:
 
 
 
-# ===== ADDITIONAL UTILITY FUNCTIONS =====
+# ====================  ADDITIONAL UTILITY FUNCTIONS ==================== #
 
 def get_nearest_levels(symbol: str, distance_pct: float = 5.0) -> Dict:
     """Get support/resistance levels within specified distance from current price"""
@@ -2751,15 +2751,3 @@ def batch_pattern_analysis(symbols: List[str]) -> List[Dict]:
     
     return results
 
-
-
-company_with_sc_id = {
-    "RELIANCE": 2885,
-    "BBOX": 8164,
-    "TATAMOTORS": 3456,
-    "TATAPOWER": 3426,
-    "ASTERDM": 1508,
-    "HDFCBANK": 1333,
-    "TCS": 11536,
-    "INFY": 1594,
-} 

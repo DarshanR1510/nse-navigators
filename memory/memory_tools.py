@@ -41,7 +41,7 @@ async def remove_position(agent_name: str, symbol: str):
         print(f"Position for {symbol} not found: {e}")
 
 
-async def add_to_watchlist(agent_name: str, stock: str, details: dict):
+async def add_to_watchlist(agent_name: str, stock: str, details: str):
     agent_memory = AgentMemory(agent_name)
     watchlist = agent_memory.get_watchlist()
     watchlist[stock] = details

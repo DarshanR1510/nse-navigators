@@ -18,6 +18,7 @@ from datetime import datetime
 from memory.agent_memory import AgentMemory
 from market_tools.live_prices import update_instruments
 from market_tools.market import get_security_id, get_symbol_price_impl
+from data.database import DatabaseQueries
 
 agent_names = ["warren", "george", "ray", "cathie"] 
 
@@ -120,7 +121,8 @@ def execute_buy(
                 "rationale": rationale,
                 "status": "executed"
             }
-            agent_memory.log_trade(trade_details)    
+            agent_memory.log_trade(trade_details)
+            DatabaseQueries.write_log(agent_name, "account", f"Bought {quantity} of {symbol}")
 
         except Exception as e:
             print(f"[WARN] Could not log buy trade to agent memory: {e}")
@@ -225,6 +227,7 @@ def execute_sell(
             "status": "executed"
         }
         agent_memory.log_trade(trade_details)
+        DatabaseQueries.write_log(agent_name, "account", f"Sold {quantity} of {symbol}")
 
         
     except Exception as e:

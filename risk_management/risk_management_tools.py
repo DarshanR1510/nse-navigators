@@ -1,6 +1,6 @@
 from risk_management.stop_loss_manager import StopLossManager
 from risk_management.position_manager import PositionManager
-from utils.redis_client import main_redis_client
+from utils.redis_client import main_redis_client as r
 import numpy as np
 from market_tools.market import get_prices_with_cache
 from memory.agent_memory import AgentMemory
@@ -18,7 +18,7 @@ async def t_set_stop_loss_order(symbol: str, stop_price: float, quantity: int, a
         agent_name: Name of the agent
     Returns: dict with status and details.
     """
-    slm = StopLossManager(main_redis_client)
+    slm = StopLossManager(r)
     slm.set_stop_loss(symbol, stop_price, quantity, agent_name)
     return {"status": "success", "symbol": symbol, "stop_price": stop_price, "quantity": quantity, "agent_name": agent_name}
 

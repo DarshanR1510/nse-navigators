@@ -83,7 +83,7 @@ async def m_remove_position(agent_name: str, symbol: str):
 
 
 @mcp.tool()
-async def m_add_to_watchlist(agent_name: str, stock: str, details: dict):
+async def m_add_to_watchlist(agent_name: str, stock: str, details: str):
     """
     Add a stock to the agent's watchlist with optional details.
     Args:

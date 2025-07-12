@@ -8,7 +8,7 @@ from agents import Agent, Tool, Runner, OpenAIChatCompletionsModel, trace
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 from dataclasses import asdict
-from utils.redis_client import main_redis_client
+from utils.redis_client import main_redis_client as r
 from trade_agents.templates import researcher_instructions, trader_instructions, trade_message, rebalance_message, research_tool
 
 load_dotenv(override=True)
@@ -65,8 +65,8 @@ class Trader:
         self.position_manager = position_manager        
         self.stop_loss_manager = None
         self.agent_memory = AgentMemory(self.name)       
-        self.redis_client = main_redis_client        
-        
+        self.redis_client = r
+
 
     async def create_agent(self, trader_mcp_servers, researcher_mcp_servers) -> Agent:
         tool = await get_researcher_tool(researcher_mcp_servers, self.model_name)

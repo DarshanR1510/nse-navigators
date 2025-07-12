@@ -5,7 +5,7 @@ from memory.agent_memory import AgentMemory
 from memory.memory_tools import get_overall_market_context
 import logging
 from datetime import datetime, time
-from utils.redis_client import main_redis_client
+from utils.redis_client import main_redis_client as r
 import asyncio
 
 agent_names = ["warren", "george", "ray", "cathie"]
@@ -25,7 +25,7 @@ class AgentOrchestrator:
         """
         
         self.agents = {agent.name: agent for agent in agents}
-        self.redis_client = main_redis_client
+        self.redis_client = r
         self.logger = logging.getLogger(__name__)
             
         self.position_manager = {name: pm for name, pm in position_managers.items() if pm is not None}

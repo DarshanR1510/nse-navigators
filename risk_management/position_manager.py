@@ -15,7 +15,7 @@ import os
 from dotenv import load_dotenv
 from data.database import DatabaseQueries
 from memory import memory_tools
-from utils.redis_client import main_redis_client
+from utils.redis_client import main_redis_client as r
 from data.schemas import Position, RiskLimits
 
 load_dotenv(override=True)
@@ -27,7 +27,7 @@ class PositionManager:
     
     def __init__(self, 
                  agent_name: str,
-                 redis_client: redis.Redis = main_redis_client,
+                 redis_client: redis.Redis = r,
                  portfolio_value: float = float(os.getenv("INITIAL_BALANCE", 500000.0)),
                  risk_limits: Optional[RiskLimits] = None):
         """

@@ -1,7 +1,6 @@
 import time
 from dotenv import load_dotenv
 from typing import Dict, List
-from utils.redis_client import main_redis_client as r
 from datetime import datetime, timedelta
 import talib as ta
 import numpy as np

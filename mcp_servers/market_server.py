@@ -203,13 +203,11 @@ async def get_closing_bollinger_bands(
 async def get_analyze_volume_patterns(
     symbol: str) -> dict:
     """
-    Analyze volume patterns for a given stock symbol over a specified date range.
+    Analyze volume patterns for a given stock symbol over a year data and get 1-month trends.
     Args:
         symbol: The trading symbol of the stock (must be resolved first).
-        from_date: Start date in 'YYYY-MM-DD' format.
-        to_date: End date in 'YYYY-MM-DD' format.
     Returns:
-        A dictionary with volume trends and significant changes.
+        A dictionary with volume trends and significant changes of last one month.
     """
     return analyze_volume_patterns(symbol)
 
@@ -219,7 +217,7 @@ async def get_analyze_volume_patterns(
 async def get_relative_strength(
     symbol: str) -> dict:
     """
-    Calculate the Relative Strength (RS) of a stock compared to a benchmark index.
+    Calculate the Relative Strength (RS) of a stock compared to a NIFTY index.
     Args:
         symbol: The trading symbol of the stock (must be resolved first).
     Returns:
@@ -233,11 +231,9 @@ async def get_relative_strength(
 async def get_detect_breakout_patterns(
     symbol: str) -> dict:
     """
-    Detect breakout patterns for a given stock symbol over a specified date range.
+    Detect breakout patterns for a given stock symbol over a last year data.
     Args:
         symbol: The trading symbol of the stock (must be resolved first).
-        from_date: Start date in 'YYYY-MM-DD' format.
-        to_date: End date in 'YYYY-MM-DD' format.
     Returns:
         A dictionary with breakout levels and their trends.
     """
@@ -249,11 +245,9 @@ async def get_detect_breakout_patterns(
 async def get_support_resistance_levels(
     symbol: str) -> dict:
     """
-    Calculate support and resistance levels for a given stock symbol over a specified date range.
+    Calculate support and resistance levels for a given stock symbol over a last year data.
     Args:
         symbol: The trading symbol of the stock (must be resolved first).
-        from_date: Start date in 'YYYY-MM-DD' format.
-        to_date: End date in 'YYYY-MM-DD' format.
     Returns:
         A dictionary with support and resistance levels.
     """
