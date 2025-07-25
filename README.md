@@ -9,12 +9,22 @@
 ## 🌟 Key Features
 
 - **Multi-Agent Intelligence:**
-  - Four specialized AI agents, each with unique trading strategies and risk management protocols.
+  - Six specialized AI agents, each with unique trading strategies and risk management protocols.
   - Agents autonomously research, analyze, and execute trades on Indian stocks.
+  
+  **Agent Types:**
+  - **Manager Agent:** Oversees the entire trading workflow, monitors portfolio, coordinating other agents.
+  - **Research Agent:** Conducts in-depth research on stocks, sectors, and market trends.
+  - **Fundamental Analyst Agent:** Analyzes financial statements, ratios, and company fundamentals.
+  - **Technical Analyst Agent:** Performs technical analysis using advanced indicators and chart patterns.
+  - **Decision Agent:** Takes the reports from technical and fundamental agents to pick the best stocks.
+  - **Execution Agent:** Executes trades based on decisions made by the Manager Agent
 
 - **Integrated Financial Data & Symbol Tools:**
-  - Fast, robust symbol resolution and financial data extraction (Screener.in, Polygon-style APIs).
+  - Fast, robust symbol resolution and financial data extraction using MCP tools.
   - Batch and cached price fetching with rate-limit-safe, multi-agent support.
+  - Analyzes past one year of data for each stock to identify trends and patterns.
+  - Analyzes financial data to identify undervalued stocks.
 
 - **Agentic Workflows:**
   - Agents coordinate: one scouts market opportunities (news/trends), others perform deep financial, fundamental, and technical analysis.
@@ -33,40 +43,23 @@
 
 ---
 
-## 🏗️ Project Structure
-
-```
-├── app.py                # Gradio UI & dashboard
-├── accounts.py           # Portfolio, profit/loss, and account logic
-├── market.py             # Price fetching, global cache, batch support
-├── scraper.py            # Screener.in scraping, Playwright fallback
-├── market_server.py      # MCP server, tool registration
-├── traders.py            # Agent logic & workflows
-├── trading_floor.py      # Agent orchestration
-├── database.py           # DB queries & static methods
-├── push_server.py        # Push notification MCP tool
-├── requirements.txt      # Python dependencies
-├── pyproject.toml        # Project metadata & dependencies
-├── .gitignore            # Git exclusions
-├── README.md             # This file
-├── playwright_mcp_server.js # Node.js Playwright HTML fetcher
-└── ...
-```
-
----
-
 ## 🤖 How It Works
 
-1. **Symbol Resolution:**
-   - Fast, in-memory MCP tool resolves company names/symbols for all agents.
-2. **Data Fetching:**
-   - Financials, prices, and technicals fetched via robust, rate-limited, cached tools.
-3. **Agent Workflows:**
-   - Agents coordinate: scout, analyze, and trade using LLMs and MCP tools.
-4. **Portfolio Management:**
-   - Real-time profit/loss, holdings, and trade history—fully automated.
-5. **Live Dashboard:**
-   - Monitor agent actions, trades, and portfolio value in a beautiful UI.
+1. **Manager Decides:**
+   - At every market hour, the Manager Agent decides the next action based on portfolio status and market conditions.
+2. **Researcher Agent:**
+   - If the decision is to research, it fetches news, trends, and performs deep analysis using LLMs. and filter out 4-6 stocks.
+3. **Fundamental & Technical Workflows:**
+   - Those stocks get further analyzed by the Fundamental Analyst and Technical Analyst Agents.
+   - They generate detailed reports on each stock's financial health and technical indicators.
+4. **Decision Work:**
+   - Those reports are sent to the Decision Agent, which evaluates and selects the best candidates for trading.
+5. **Execution:**
+    - The Execution Agent executes trades based on the Decision Agent's recommendations.
+    - Sends a push notification with trade details.
+    - Sets a stop-loss and take-profit or book loss for each trade.
+6. **Live Dashboard:**
+   - Monitor agent actions, activity logs, trades, and portfolio value, strategies and transactions in a beautiful UI.
 
 ---
 
@@ -96,10 +89,10 @@
   ```sh
   python app.py
   ```
-- **Run MCP servers/tools:**
+- **Run Trading Floor:**
   ```sh
-  python market_server.py
-  python push_server.py
+  python trading_floor.py
+  ```
   # ...
   ```
 - **Test agent workflows:**
@@ -109,29 +102,22 @@
 
 ## 📊 Live Dashboard Preview
 
-![Dashboard Screenshot](https://user-images.githubusercontent.com/your-dashboard-screenshot.png)
-
----
-
-## 🧩 Extensibility
-- Add new agents, strategies, or data sources with minimal code changes.
-- Plug in new MCP tools or LLM providers easily.
+![Dashboard Screenshot](utils/Dashboard.png)
 
 ---
 
 ## 📝 License
 
 MIT License. See [LICENSE](LICENSE) for details.
-
 ---
 
 ## 👤 Author
 
 - **Darshan Ramani**  
   [darshanramani1@gmail.com](mailto:darshanramani1@gmail.com)
-  
   [GitHub](https://github.com/DarshanR1510)
-
+  [LinkedIn](https://www.linkedin.com/in/darshanramani/)
+  [email](mailto:darshanramani1@gmail.com)
 ---
 
 ## ⭐ Star this repo if you like it!
