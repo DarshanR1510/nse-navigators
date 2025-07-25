@@ -533,7 +533,7 @@ class TraderView:
             queue=False
         )
 
-        holdings_timer = gr.Timer(value=1) 
+        holdings_timer = gr.Timer(value=2) 
         holdings_timer.tick(
             fn=lambda: (
                 self.trader.get_holdings_html(),
@@ -545,7 +545,7 @@ class TraderView:
             queue=False
         )
         
-        log_timer = gr.Timer(value=0.5)
+        log_timer = gr.Timer(value=2)
         log_timer.tick(
             fn=self.trader.get_logs, 
             inputs=[self.log], 
@@ -554,7 +554,7 @@ class TraderView:
             queue=False
         )
 
-        status_timer = gr.Timer(value=1)
+        status_timer = gr.Timer(value=2)
         status_timer.tick(
             fn=self.trader.get_agent_status,
             inputs=[],
