@@ -5,6 +5,10 @@ from data.database import DatabaseQueries
 import requests
 import threading
 from utils.redis_client import main_redis_client as r
+import re
+from typing import Optional, List, Tuple
+from difflib import SequenceMatcher
+
 
 # Global cache for prices
 _PRICE_CACHE = {
@@ -46,37 +50,278 @@ def get_security_id(symbol: str) -> int:
     return int(DatabaseQueries.get_security_id(symbol))
 
 
-def resolve_symbol_impl(company_query: str) -> str:
+# def resolve_symbol_impl(company_query: str) -> str:
+#     """
+#     Given a company query (symbol, name, or display), return the best matching UNDERLYING_SYMBOL.
+#     """
+#     query = company_query.lower().strip()
+#     symbol_keys = r.keys('symbol:*')
+
+#     # 1. Exact match on symbol
+#     for key in symbol_keys:
+#         symbol_data = r.hgetall(key)
+#         symbol = symbol_data.get(b'symbol', b'').decode().lower()
+#         if symbol == query:
+#             return symbol_data.get(b'symbol', b'').decode()
+
+#     # 2. Exact match on name or display
+#     for key in symbol_keys:
+#         symbol_data = r.hgetall(key)
+#         name = symbol_data.get(b'name', b'').decode().lower()
+#         display = symbol_data.get(b'display', b'').decode().lower()
+#         if name == query or display == query:
+#             return symbol_data.get(b'symbol', b'').decode()
+
+#     # 3. Partial match on symbol, name, or display
+#     for key in symbol_keys:
+#         symbol_data = r.hgetall(key)
+#         symbol = symbol_data.get(b'symbol', b'').decode().lower()
+#         name = symbol_data.get(b'name', b'').decode().lower()
+#         display = symbol_data.get(b'display', b'').decode().lower()
+#         if query in symbol or query in name or query in display:
+#             return symbol_data.get(b'symbol', b'').decode()
+
+#     return None
+
+
+def resolve_symbol_impl(company_query: str) -> Optional[str]:
     """
-    Given a company query (symbol, name, or display), return the best matching UNDERLYING_SYMBOL.
+    Enhanced symbol resolution with improved accuracy and performance.
+    Returns the best matching UNDERLYING_SYMBOL for a given company query.
     """
-    query = company_query.lower().strip()
+    if not company_query or not company_query.strip():
+        return None
+        
+    query = company_query.strip()
+    query_lower = query.lower()
+    
+    # Get all symbol keys once
     symbol_keys = r.keys('symbol:*')
-
-    # 1. Exact match on symbol
+    if not symbol_keys:
+        return None
+    
+    # Store results for different match types with scores
+    exact_matches = []
+    fuzzy_matches = []
+    partial_matches = []
+    
+    # Pre-compile regex for better performance on partial matching
+    # Escape special regex characters in query
+    escaped_query = re.escape(query_lower)
+    partial_pattern = re.compile(escaped_query, re.IGNORECASE)
+    
     for key in symbol_keys:
-        symbol_data = r.hgetall(key)
-        symbol = symbol_data.get(b'symbol', b'').decode().lower()
-        if symbol == query:
-            return symbol_data.get(b'symbol', b'').decode()
+        try:
+            symbol_data = r.hgetall(key)
+            if not symbol_data:
+                continue
+                
+            # Decode all fields once
+            symbol = symbol_data.get(b'symbol', b'').decode().strip()
+            name = symbol_data.get(b'name', b'').decode().strip()
+            display = symbol_data.get(b'display', b'').decode().strip()
+            
+            if not symbol:  # Skip if no symbol
+                continue
+                
+            symbol_lower = symbol.lower()
+            name_lower = name.lower()
+            display_lower = display.lower()
+            
+            # 1. EXACT MATCHES (highest priority)
+            if (query_lower == symbol_lower or 
+                query_lower == name_lower or 
+                query_lower == display_lower):
+                exact_matches.append((symbol, 1.0))
+                continue
+            
+            # 2. FUZZY MATCHES (for typos and slight variations)
+            # Check fuzzy matching with high threshold
+            symbol_ratio = SequenceMatcher(None, query_lower, symbol_lower).ratio()
+            name_ratio = SequenceMatcher(None, query_lower, name_lower).ratio()
+            display_ratio = SequenceMatcher(None, query_lower, display_lower).ratio()
+            
+            max_fuzzy_ratio = max(symbol_ratio, name_ratio, display_ratio)
+            if max_fuzzy_ratio >= 0.85:  # High similarity threshold
+                fuzzy_matches.append((symbol, max_fuzzy_ratio))
+                continue
+            
+            # 3. WORD-BASED MATCHING (for multi-word company names)
+            query_words = set(query_lower.split())
+            name_words = set(name_lower.split())
+            display_words = set(display_lower.split())
+            
+            # Check if all query words are present in name or display
+            if query_words and (query_words.issubset(name_words) or query_words.issubset(display_words)):
+                # Calculate word overlap score
+                name_overlap = len(query_words.intersection(name_words)) / len(query_words)
+                display_overlap = len(query_words.intersection(display_words)) / len(query_words)
+                word_score = max(name_overlap, display_overlap)
+                fuzzy_matches.append((symbol, word_score))
+                continue
+            
+            # 4. PARTIAL MATCHES (lowest priority, more flexible)
+            if (partial_pattern.search(symbol_lower) or 
+                partial_pattern.search(name_lower) or 
+                partial_pattern.search(display_lower)):
+                
+                # Calculate partial match score based on length ratio
+                score = len(query) / max(len(symbol), len(name), len(display), 1)
+                partial_matches.append((symbol, score))
+                
+        except (UnicodeDecodeError, AttributeError) as e:
+            # Skip corrupted entries
+            continue
+    
+    # Return best match based on priority and score
+    if exact_matches:
+        return exact_matches[0][0]  # Return first exact match
+    
+    if fuzzy_matches:
+        # Sort by score descending and return best match
+        fuzzy_matches.sort(key=lambda x: x[1], reverse=True)
+        return fuzzy_matches[0][0]
+    
+    if partial_matches:
+        # Sort by score descending and return best match
+        partial_matches.sort(key=lambda x: x[1], reverse=True)
+        return partial_matches[0][0]
+    
+    return None
 
-    # 2. Exact match on name or display
+
+def resolve_symbol_with_cache(company_query: str, use_cache: bool = True) -> Optional[str]:
+    """
+    Enhanced version with optional caching for frequently searched queries.
+    """
+    if not company_query or not company_query.strip():
+        return None
+    
+    cache_key = f"symbol_cache:{company_query.lower().strip()}"
+    
+    if use_cache:
+        # Check cache first
+        cached_result = r.get(cache_key)
+        if cached_result:
+            return cached_result.decode() if cached_result != b'NULL' else None
+    
+    # Perform search
+    result = resolve_symbol_impl(company_query)
+    
+    if use_cache:
+        # Cache the result (including None results to avoid repeated searches)
+        cache_value = result if result else 'NULL'
+        r.setex(cache_key, 3600, cache_value)  # Cache for 1 hour
+    
+    return result
+
+
+def resolve_symbol_batch(company_queries: List[str]) -> List[Tuple[str, Optional[str]]]:
+    """
+    Batch processing for multiple queries - more efficient for bulk operations.
+    """
+    results = []
+    
+    # Get all symbol data once
+    symbol_keys = r.keys('symbol:*')
+    symbol_data_cache = {}
+    
     for key in symbol_keys:
-        symbol_data = r.hgetall(key)
-        name = symbol_data.get(b'name', b'').decode().lower()
-        display = symbol_data.get(b'display', b'').decode().lower()
-        if name == query or display == query:
-            return symbol_data.get(b'symbol', b'').decode()
+        try:
+            data = r.hgetall(key)
+            if data and b'symbol' in data:
+                symbol = data.get(b'symbol', b'').decode().strip()
+                if symbol:
+                    symbol_data_cache[key] = {
+                        'symbol': symbol,
+                        'name': data.get(b'name', b'').decode().strip(),
+                        'display': data.get(b'display', b'').decode().strip()
+                    }
+        except (UnicodeDecodeError, AttributeError):
+            continue
+    
+    # Process each query
+    for query in company_queries:
+        result = resolve_symbol_with_preloaded_data(query, symbol_data_cache)
+        results.append((query, result))
+    
+    return results
 
-    # 3. Partial match on symbol, name, or display
-    for key in symbol_keys:
-        symbol_data = r.hgetall(key)
-        symbol = symbol_data.get(b'symbol', b'').decode().lower()
-        name = symbol_data.get(b'name', b'').decode().lower()
-        display = symbol_data.get(b'display', b'').decode().lower()
-        if query in symbol or query in name or query in display:
-            return symbol_data.get(b'symbol', b'').decode()
 
+def resolve_symbol_with_preloaded_data(company_query: str, symbol_data_cache: dict) -> Optional[str]:
+    """
+    Helper function for batch processing with preloaded data.
+    """
+    if not company_query or not company_query.strip():
+        return None
+        
+    query = company_query.strip()
+    query_lower = query.lower()
+    
+    exact_matches = []
+    fuzzy_matches = []
+    partial_matches = []
+    
+    escaped_query = re.escape(query_lower)
+    partial_pattern = re.compile(escaped_query, re.IGNORECASE)
+    
+    for key, data in symbol_data_cache.items():
+        symbol = data['symbol']
+        name = data['name']
+        display = data['display']
+        
+        symbol_lower = symbol.lower()
+        name_lower = name.lower()
+        display_lower = display.lower()
+        
+        # Exact matches
+        if (query_lower == symbol_lower or 
+            query_lower == name_lower or 
+            query_lower == display_lower):
+            exact_matches.append((symbol, 1.0))
+            continue
+        
+        # Fuzzy matches
+        symbol_ratio = SequenceMatcher(None, query_lower, symbol_lower).ratio()
+        name_ratio = SequenceMatcher(None, query_lower, name_lower).ratio()
+        display_ratio = SequenceMatcher(None, query_lower, display_lower).ratio()
+        
+        max_fuzzy_ratio = max(symbol_ratio, name_ratio, display_ratio)
+        if max_fuzzy_ratio >= 0.85:
+            fuzzy_matches.append((symbol, max_fuzzy_ratio))
+            continue
+        
+        # Word-based matching
+        query_words = set(query_lower.split())
+        name_words = set(name_lower.split())
+        display_words = set(display_lower.split())
+        
+        if query_words and (query_words.issubset(name_words) or query_words.issubset(display_words)):
+            name_overlap = len(query_words.intersection(name_words)) / len(query_words)
+            display_overlap = len(query_words.intersection(display_words)) / len(query_words)
+            word_score = max(name_overlap, display_overlap)
+            fuzzy_matches.append((symbol, word_score))
+            continue
+        
+        # Partial matches
+        if (partial_pattern.search(symbol_lower) or 
+            partial_pattern.search(name_lower) or 
+            partial_pattern.search(display_lower)):
+            score = len(query) / max(len(symbol), len(name), len(display), 1)
+            partial_matches.append((symbol, score))
+    
+    # Return best match
+    if exact_matches:
+        return exact_matches[0][0]
+    
+    if fuzzy_matches:
+        fuzzy_matches.sort(key=lambda x: x[1], reverse=True)
+        return fuzzy_matches[0][0]
+    
+    if partial_matches:
+        partial_matches.sort(key=lambda x: x[1], reverse=True)
+        return partial_matches[0][0]
+    
     return None
 
 
@@ -204,35 +449,6 @@ def get_symbol_history_daily_data(
     if not data:
         return {}
     return data
-
-
-def get_symbol_history_intraday_data(
-        symbol: str,        
-        interval: str,
-        from_date: str,
-        to_date: str) -> dict:
-    """Fetches historical intraday data from the given time period for a given symbol.
-    Args:
-        security_id (int): The security ID of the stock.
-        exchange_segment (str): The exchange segment (e.g., "NSE_EQ").
-        interval (str): The interval for intraday data ("1" for 1 minute) (1, 5, 10, 15, 30, 60).
-        from_date (str): Start date in "YYYY-MM-DD HH:MM:SS" format.
-        to_date (str): End date in "YYYY-MM-DD HH:MM:SS" format.
-    Returns:
-        dict: Historical intraday data for the specified security.
-        Returns middle date data. (given from: 5th and to: 7th June, returns data for 6th June)
-    """
-
-    data = dhan.intraday_minute_data(
-        security_id=get_security_id(symbol),
-        exchange_segment="NSE_EQ",
-        instrument_type="EQUITY",
-        from_date=from_date,
-        to_date=to_date,
-        interval=interval        
-    )
-    return data
-
 
 
 

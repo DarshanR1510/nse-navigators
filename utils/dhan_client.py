@@ -21,3 +21,11 @@ def dhan_feed(symbols: list[tuple[int, str]]) -> marketfeed.DhanFeed:
         version='v2'
     )
     return live_feed
+
+
+# Example usage
+# bbox = dhan.ohlc_data(
+#         securities={"NSE_EQ": [8164]}
+#     )
+
+# print(bbox)

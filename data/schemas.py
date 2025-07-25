@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Literal
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from agents.memory import SQLiteSession
+import pytz
+
+IST = pytz.timezone('Asia/Kolkata')
 
 class SelectedSymbol(BaseModel):
     company_name: str
     """The selected stock company name."""
-    
-    company_symbol: str
-    """The selected stock symbol. You can find company_symbol by using resolve_symbol tool."""
+
+    symbol: str = ""
     
     reason: str
     """The reason for selecting this stock. This should be a brief explanation of why this stock
@@ -28,8 +31,56 @@ class SelectedSymbol(BaseModel):
     investment and making informed decisions."""
 
 
+class SymbolAnalysis(BaseModel):
+    symbol: str
+    """The stock symbol being analyzed."""
+    
+    analysis: str
+    """A 100 word analysis of the stock, including key metrics and insights.
+    This should provide a concise overview of the stock's performance, potential, and any relevant market
+    trends or indicators that support the analysis."""
+
+    conviction_score: float
+    """A score representing the level of conviction in this selection, typically on a scale from
+    0 to 1, where 1 indicates high confidence in the stock's potential performance."""
+
+
 class SelectedSymbols(BaseModel):
     selections: list[SelectedSymbol]
+
+class SymbolsAnalysis(BaseModel):
+    analyses: list[SymbolAnalysis]
+
+class TradeCandidate(BaseModel):
+    symbol: str
+    entry_price: float
+    quantity: int
+    stop_loss: float
+    target_price: float
+    reason: str
+
+class WatchlistCandidate(BaseModel):
+    symbol: str
+    composite_score: float
+    reason: str
+    
+class DecisionAgentOutput(BaseModel):
+    trade_candidate: Optional[TradeCandidate]  # Only one, not a list
+    watchlist: Optional[WatchlistCandidate]    # Only one, not a list
+    decision: str
+
+class ExecutionAgentOutput(BaseModel):
+    execution_status: str
+    trade_details: TradeCandidate
+    push_sent: bool
+
+@dataclass
+class AgentConfig:
+    name: str
+    model_name: str
+    strategy: str
+    session: SQLiteSession
+    trace_id: str = None
 
 @dataclass
 class Position:
@@ -41,7 +92,7 @@ class Position:
     stop_loss: float
     target: float
     entry_date: str
-    agent_name: str
+    trader_name: str
     position_type: str  # "LONG" or "SHORT"
     reason: str
     position_size_percent: float
@@ -51,7 +102,7 @@ class Position:
 
 @dataclass
 class TradeOrder:
-    agent_name: str
+    trader_name: str
     symbol: str
     quantity: int
     order_type: Literal["BUY", "SELL"]

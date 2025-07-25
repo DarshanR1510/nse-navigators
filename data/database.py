@@ -2,7 +2,10 @@ import sqlite3
 import json
 from datetime import datetime
 from dotenv import load_dotenv
-import csv
+import pytz
+import os
+
+IST = pytz.timezone("Asia/Kolkata")
 
 load_dotenv(override=True)
 
@@ -74,7 +77,7 @@ with sqlite3.connect(DB) as conn:
             stop_loss REAL,
             target REAL,
             entry_date TEXT,
-            agent_name TEXT,
+            trader_name TEXT,
             position_type TEXT,
             reason TEXT,
             position_size_percent REAL,
@@ -91,7 +94,7 @@ with sqlite3.connect(DB) as conn:
             exit_price REAL,
             entry_date TEXT,
             exit_date TEXT,
-            agent_name TEXT,
+            trader_name TEXT,
             position_type TEXT,
             reason TEXT,
             realized_pnl REAL,
@@ -107,7 +110,7 @@ with sqlite3.connect(DB) as conn:
             exit_price REAL,
             profit_loss REAL,
             exit_date TEXT,
-            agent_name TEXT
+            trader_name TEXT
         )
     ''')
     conn.commit()
@@ -147,13 +150,13 @@ class DatabaseQueries:
 
     @staticmethod
     def write_log(name: str, type: str, message: str):
-        now = datetime.now().isoformat()
+        now = datetime.now(IST).strftime("%Y-%m-%d:%H:%M:%S")
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO logs (name, datetime, type, message)
-                VALUES (?, datetime('now'), ?, ?)
-            ''', (name.lower(), type, message))
+                VALUES (?, ?, ?, ?)
+            ''', (name.lower(), now, type, message))
             conn.commit()
 
     @staticmethod
@@ -214,11 +217,11 @@ class DatabaseQueries:
             return [dict(row) for row in rows]
         
     @staticmethod
-    def save_position(position: dict, agent_name: str):
+    def save_position(position: dict, trader_name: str):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO positions (symbol, quantity, entry_price, current_price, stop_loss, target, entry_date, agent_name, position_type, reason, position_size_percent, unrealized_pnl, status)
+                INSERT INTO positions (symbol, quantity, entry_price, current_price, stop_loss, target, entry_date, trader_name, position_type, reason, position_size_percent, unrealized_pnl, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 position['symbol'],
@@ -228,7 +231,7 @@ class DatabaseQueries:
                 position['stop_loss'],
                 position['target'],
                 position['entry_date'],
-                position['agent_name'],
+                position['trader_name'],
                 position['position_type'],
                 position['reason'],
                 position['position_size_percent'],
@@ -238,27 +241,27 @@ class DatabaseQueries:
             conn.commit()
 
     @staticmethod
-    def load_positions(agent_name: str = None):
+    def load_positions(trader_name: str = None):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM positions WHERE agent_name = ?', (agent_name,))
+            cursor.execute('SELECT * FROM positions WHERE trader_name = ?', (trader_name,))
             rows = cursor.fetchall()
             return [dict(row) for row in rows] if rows else []
         
     @staticmethod
-    def remove_position(agent_name: str, symbol: str):
+    def remove_position(trader_name: str, symbol: str):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM positions WHERE symbol = ? AND agent_name = ?', (symbol, agent_name,))
+            cursor.execute('DELETE FROM positions WHERE symbol = ? AND trader_name = ?', (symbol, trader_name,))
             conn.commit()
 
     @staticmethod
-    def save_closed_position(position: dict, agent_name: str):
+    def save_closed_position(position: dict, trader_name: str):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO closed_positions (symbol, quantity, entry_price, exit_price, profit_loss, exit_date, agent_name)
+                INSERT INTO closed_positions (symbol, quantity, entry_price, exit_price, profit_loss, exit_date, trader_name)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 position['symbol'],
@@ -267,16 +270,16 @@ class DatabaseQueries:
                 position['exit_price'],
                 position['profit_loss'],
                 position['exit_date'],
-                agent_name
+                trader_name
             ))
             conn.commit()
 
     @staticmethod
-    def load_closed_positions(agent_name: str = None):
+    def load_closed_positions(trader_name: str = None):
         with sqlite3.connect(DatabaseQueries.DB) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM closed_positions WHERE AGENT_NAME = ?', (agent_name,))
+            cursor.execute('SELECT * FROM closed_positions WHERE AGENT_NAME = ?', (trader_name,))
             rows = cursor.fetchall()
             return [dict(row) for row in rows] if rows else []
         

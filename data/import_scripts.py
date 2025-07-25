@@ -1,6 +1,6 @@
 import sqlite3
 import csv
-# from data.database import DB
+
 
 DB = "accounts.db"
 
@@ -28,7 +28,10 @@ def import_scripts_from_csv(csv_path: str):
                 row['SERIES'],
                 float(row['LOT_SIZE']) if row['LOT_SIZE'] else None
             )
-            for row in reader if row['EXCH_ID'] == 'NSE' and row['INSTRUMENT'] == 'EQUITY'
+            for row in reader 
+            if row['EXCH_ID'] == 'NSE' 
+            and row['INSTRUMENT'] == 'EQUITY'
+            and not any(char.isdigit() for char in row['UNDERLYING_SYMBOL'])
         ]
         index_rows = [
             (
@@ -55,8 +58,14 @@ def import_scripts_from_csv(csv_path: str):
         ]
     with sqlite3.connect(DB) as conn:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM scripts")
-        cursor.execute("DELETE FROM indexes")
+        # Delete rows only if tables exist
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='scripts'")
+        if cursor.fetchone():
+            cursor.execute("DELETE FROM scripts")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='indexes'")
+        if cursor.fetchone():
+            cursor.execute("DELETE FROM indexes")
+        
         cursor.executemany('''
             INSERT INTO scripts VALUES (
                 ?,?,?,?,?,?,?,?,?,?,?,?

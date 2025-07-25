@@ -1,7 +1,6 @@
 import time
 from dotenv import load_dotenv
 from typing import Dict, List
-from utils.redis_client import main_redis_client as r
 from datetime import datetime, timedelta
 import talib as ta
 import numpy as np
@@ -47,8 +46,8 @@ def get_nifty_data() -> Dict:
 
     if not nifty_data or 'data' not in nifty_data:
         return {}
-
     return nifty_data
+
 
 def refined_ohlc_data(data_json: dict) -> pd.DataFrame:
     """
@@ -81,12 +80,8 @@ async def get_market_regime() -> Dict:
     nifty_data = get_nifty_data()
     df_nifty_data = refined_ohlc_data(nifty_data)
     
-    if not df_nifty_data or len(df_nifty_data) < 5:
-        print("Insufficient data to analyze market regime")
-        return {"regime": "Unknown", "confidence": 0.0}
-    
     # Calculate EMAs and Slopes
-    df_nifty_data['ema20'] = ta.EMA(df_nifty_data['close'], 20)
+    df_nifty_data['ema20'] = ta.EMA(df_nifty_data['close'], 20)    
     df_nifty_data['ema50'] = ta.EMA(df_nifty_data['close'], 50)
     df_nifty_data['ema200'] = ta.EMA(df_nifty_data['close'], 200)
 
@@ -141,7 +136,7 @@ async def get_market_regime() -> Dict:
         confidence = bear_votes / 3
     else:
         regime = "Sideways"
-        confidence = sideways_votes / 3
+        confidence = sideways_votes / 3    
 
     return {"regime": regime, "confidence": round(confidence, 2)}
 
@@ -150,7 +145,7 @@ async def get_sector_performance(smooth_days: int = 3) -> Dict:
     """
     Advanced sector performance: percent change, slope, z-score normalized momentum.
     """
-    sectors: List[Dict] = get_sector_data().get("sectors", [])
+    sectors: List[Dict] = get_sector_data().get("sectors", [])        
     if not sectors:
         return {"rankings": []}
 
@@ -158,7 +153,7 @@ async def get_sector_performance(smooth_days: int = 3) -> Dict:
 
     for sector in sectors:
         name = sector.get("name")
-        prices = sector.get("prices", [])
+        prices = sector.get("prices", [])        
 
         if not prices or len(prices) < smooth_days + 1:
             continue
@@ -166,7 +161,7 @@ async def get_sector_performance(smooth_days: int = 3) -> Dict:
         # Smooth last few days
         prices_np = np.array(prices)
         start_avg = np.mean(prices_np[:smooth_days])
-        end_avg = np.mean(prices_np[-smooth_days:])
+        end_avg = np.mean(prices_np[-smooth_days:])        
 
         if start_avg <= 0:
             continue
@@ -179,10 +174,10 @@ async def get_sector_performance(smooth_days: int = 3) -> Dict:
 
         sector_metrics.append({
             "sector": name,
-            "change_pct": round(change_pct, 2),
-            "slope": round(slope, 4)
-        })
-
+            "change_pct": round(float(change_pct), 2),
+            "slope": round(float(slope), 4)
+        })    
+    
     if not sector_metrics:
         return {"rankings": []}
 
@@ -192,7 +187,7 @@ async def get_sector_performance(smooth_days: int = 3) -> Dict:
     std = np.std(change_array) if np.std(change_array) != 0 else 1.0
 
     for s in sector_metrics:
-        z = (s["change_pct"] - mean) / std
+        z = float((s["change_pct"] - mean) / std)
         s["z_score"] = round(z, 2)
 
     # Normalize z-score to 0–1 (min-max)
@@ -203,7 +198,7 @@ async def get_sector_performance(smooth_days: int = 3) -> Dict:
         if z_max == z_min:
             s["momentum_score"] = 1.0
         else:
-            norm = (s["z_score"] - z_min) / (z_max - z_min)
+            norm = float((s["z_score"] - z_min) / (z_max - z_min))
             s["momentum_score"] = round(norm, 2)
 
     # Sort descending by momentum_score
@@ -228,11 +223,11 @@ async def get_volatility_regime() -> Dict:
 
     # Calculate recent (short-term) average
     recent_window = values[:5]
-    recent_avg = sum(recent_window) / len(recent_window)
+    recent_avg = float(sum(recent_window) / len(recent_window))
 
     # Calculate long-term average
     long_term_window = values[:30]
-    long_term_avg = sum(long_term_window) / len(long_term_window)
+    long_term_avg = float(sum(long_term_window) / len(long_term_window))
 
     if long_term_avg == 0:
         return {
@@ -257,7 +252,7 @@ async def get_volatility_regime() -> Dict:
         "ratio": ratio,
         "classification_thresholds": {
             "Low": "<0.9",
-            "Medium": "0.9–1.1",
+            "Medium": "0.9-1.1",
             "High": ">1.1"
         }
     }
@@ -270,8 +265,7 @@ def get_sector_data() -> Dict:
     Fetches sector data from Dhan API and returns it in a structured format.
     """
     sectors = []
-
-    three_months_ago = (datetime.today() - timedelta(days=90)).strftime("%Y-%m-%d")
+    three_months_ago = (datetime.today() - timedelta(days=90)).strftime("%Y-%m-%d")    
 
     for security_id in sector_names.keys():
         sector_data = dhan.historical_daily_data(
@@ -279,14 +273,13 @@ def get_sector_data() -> Dict:
             exchange_segment="IDX_I", 
             instrument_type="INDEX", 
             from_date=three_months_ago, 
-            to_date=datetime.today().strftime("%Y-%m-%d"),
-            expiry_code=0
+            to_date=datetime.today().strftime("%Y-%m-%d")
         )
         time.sleep(1.1)  # Avoid hitting API rate limits
         if not sector_data:
             continue
         
-        df_sector = refined_ohlc_data(sector_data)
+        df_sector = refined_ohlc_data(sector_data)        
         if df_sector.empty:
             continue
 
@@ -297,8 +290,9 @@ def get_sector_data() -> Dict:
             "name": sector_name,
             "prices": prices
         })
-    
+        
     return {"sectors": sectors}
+
 
 def get_vix_data() -> Dict:
     """

@@ -6,7 +6,8 @@ dist/
 wheels/
 *.egg-info
 
-agents_data/
+trader_data/
+tests/
 
 # Virtual environments
 .venv/
@@ -27,7 +28,12 @@ Thumbs.db
 
 # SQLite database files
 *.db
+*.db-shm
+*.db-wal
 *.csv
+
+#utils
+utils/refine_script_master.py
 
 # Node.js/Playwright/Puppeteer
 node_modules/
