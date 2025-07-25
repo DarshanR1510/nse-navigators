@@ -1,14 +1,14 @@
 import os
 import json
 from datetime import datetime
-
+from data.schemas import IST
 class AgentMemory:    
-    def __init__(self, agent_name: str, base_path: str = "agents_data"):        
-        self.agent_name = agent_name
+    def __init__(self, trader_name: str, base_path: str = "trader_data"):        
+        self.trader_name = trader_name
         self.base_path = base_path
 
         os.makedirs(self.base_path, exist_ok=True)
-        self.memory_file = os.path.join(self.base_path, f"{(self.agent_name).lower()}.json")
+        self.memory_file = os.path.join(self.base_path, f"{(self.trader_name).lower()}.json")
         if not os.path.exists(self.memory_file):
             self._init_memory_file()
 
@@ -32,20 +32,7 @@ class AgentMemory:
             json.dump(data, f, indent=2)
 
 
-    def store_daily_context(self, context: dict):
-        data = self._load()
-        today = datetime.now().strftime("%Y-%m-%d")
-        data["daily_context"][today] = context
-        self._save(data)
-
-    def get_daily_context(self, date: str = None) -> dict:
-        data = self._load()
-        if not date:
-            date = datetime.now().strftime("%Y-%m-%d")
-        return data["daily_context"].get(date, {})
-
-
-    def store_active_positions(self, positions: dict):
+    def store_active_position(self, positions: dict):
         data = self._load()
         data["active_positions"].update(positions)
         self._save(data)
@@ -71,11 +58,28 @@ class AgentMemory:
     def get_watchlist(self) -> dict:
         data = self._load()
         return data.get("watchlist", {})
+    
 
+    def add_trade_count(self):
+        data = self._load()
+        today = datetime.now(IST).strftime("%Y-%m-%d")
+        today_key = f"{today}-trade-count"
+        if today_key not in data:
+            data[today_key] = 1
+        else:
+            data[today_key] += 1
+        self._save(data)    
+
+    def get_trade_count(self) -> int:
+        data = self._load()
+        today = datetime.now(IST).strftime("%Y-%m-%d")
+        today_key = f"{today}-trade-count"
+        return data.get(today_key, 0)
+    
 
     def get_recent_trades(self, days: int = 30) -> list:
         data = self._load()
-        cutoff = datetime.now().timestamp() - days * 86400
+        cutoff = datetime.now(IST).timestamp() - days * 86400
         return [
             t for t in data["trades"]
             if "timestamp" in t and t["timestamp"] >= cutoff

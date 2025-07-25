@@ -1,16 +1,3 @@
-"""
-trade_execution.py - Unified Trade Execution Orchestration
-
-This module coordinates trade execution between Account (cash/holdings/transactions) and PositionManager (risk/positions),
-ensuring all business rules, risk checks, and state updates are enforced in a single place.
-
-Usage:
-    - All agent buy/sell/close actions should go through this module.
-    - This module should be imported and used by agent workflows (e.g., in traders.py or MCP servers).
-    - PositionManager and Account should not directly execute trades; they only provide state and validation.
-
-"""
-
 from typing import Optional, Tuple
 from data.accounts import Account, Transaction
 from risk_management.position_manager import PositionManager
@@ -19,19 +6,24 @@ from memory.agent_memory import AgentMemory
 from market_tools.live_prices import update_instruments
 from market_tools.market import get_security_id, get_symbol_price_impl
 from data.database import DatabaseQueries
+import os
+import logging
+from data.schemas import IST
 
-agent_names = ["warren", "george", "ray", "cathie"] 
+trader_names = ["warren", "ray", "george", "cathie"]
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def execute_buy(
-    agent_name: str,
-    account: Account,
-    position_manager: PositionManager,
+    trader_name: str,
     symbol: str,
     entry_price: float,
     stop_loss: float,
     target: float,
     quantity: int,
+    position_manager: PositionManager,
     rationale: str = "",
     position_type: str = "LONG",
     sector: Optional[str] = None
@@ -40,7 +32,9 @@ def execute_buy(
     Orchestrate a buy trade: risk validation, account update, position creation.
     """
 
-    try:
+    try:    
+        account = Account.get(trader_name)
+
         entry_price = (get_symbol_price_impl(symbol) if float(entry_price) == 0.0 else float(entry_price))
         stop_loss = float(stop_loss)
         target = float(target)
@@ -48,101 +42,117 @@ def execute_buy(
             quantity = int(quantity)
         account.balance = float(account.balance)
     except Exception as e:
-        return False, f"Type conversion error: {e}"    
+        return False, f"Type conversion error in Execute Buy: {e}"
 
     if position_manager is None:
-        raise ValueError(f"PositionManager for agent '{agent_name}' is None!")
+        raise ValueError(f"PositionManager for agent '{trader_name}' is None!")
     
     # 1. Calculate position size if not provided
     if quantity is None:
-        quantity = position_manager.calculate_position_size(entry_price, stop_loss, account.balance)
+        quantity = position_manager.calculate_position_size(entry_price, stop_loss, trader_name=trader_name)
         if quantity <= 0:
             return False, f"Position size calculation failed for {symbol}."
 
-    # 2. Validate position with PositionManager
-    is_valid, reason = position_manager.validate_new_position(
-        symbol, quantity, entry_price, stop_loss, agent_name, sector
-    )
-    if not is_valid:
-        return False, f"Risk validation failed: {reason}"
-
-    # 3. Check account funds
+    # 2. Check account funds
     total_cost = entry_price * quantity
     if total_cost > account.balance:
         return False, f"Insufficient funds: Need {total_cost}, have {account.balance}"
+    
 
-    # 4. Add position to PositionManager
+    # 3. Add position to PositionManager
     success, msg = position_manager.add_position(
-        symbol, quantity, entry_price, stop_loss, target, agent_name, rationale, position_type, sector
+        trader_name=trader_name, 
+        symbol=symbol, 
+        quantity=quantity, 
+        entry_price=entry_price, 
+        stop_loss=stop_loss, 
+        target=target, 
+        reason=rationale, 
+        position_type=position_type, 
+        sector=sector
     )
+            
 
-    # 5. Log trade in agent memory (optional)
+    # 4. Log trade in agent memory (optional)
     if success:
+        logger.info(f"Successfully added position for {trader_name} on {symbol}")
         try:
             # 1. Subtract cash from account
             total_cost = entry_price * quantity
-            account.balance -= total_cost
+            account.balance -= total_cost                    
 
             # 2. Add to holdings
             account.holdings[symbol] = account.holdings.get(symbol, 0) + quantity
+
+            logging.info(f"Account holdings after buy: {account.holdings}")
 
             # 3. Add Transaction
             account.transactions.append(Transaction(
                 symbol=symbol,
                 quantity=quantity,
                 price=entry_price,
-                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                timestamp=datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
                 rationale=rationale
             ))
+
+            logging.info(f"Account transactions after buy: {account.transactions}")
 
             # 4. Save account
             account.save()
 
             # 5. Update agent memory (active positions and trade log)
-            agent_memory = AgentMemory(agent_name)
-            agent_memory.store_active_positions({
+            agent_memory = AgentMemory(trader_name)
+            agent_memory.store_active_position(
+                {
                     symbol: {
                         "entry_price": entry_price,
                         "quantity": quantity,
                         "stop_loss": stop_loss,
                         "target": target,
                         "reason": rationale,
-                        "entry_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        "entry_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
                     }
-                })
+                }
+            )
             trade_details = {
                 "symbol": symbol,
                 "quantity": quantity,
                 "entry_price": entry_price,
                 "stop_loss": stop_loss,
                 "target": target,
-                "timestamp": datetime.now().timestamp(),
+                "timestamp": datetime.now(IST).timestamp(),
                 "type": "buy",
                 "rationale": rationale,
                 "status": "executed"
             }
             agent_memory.log_trade(trade_details)
-            DatabaseQueries.write_log(agent_name, "account", f"Bought {quantity} of {symbol}")
+            DatabaseQueries.write_log(trader_name, "account", f"Bought {quantity} of {symbol}")
 
         except Exception as e:
             print(f"[WARN] Could not log buy trade to agent memory: {e}")
 
-    # 6. Update live prices (if needed)for agent_name in agent_names:
-    
-    all_symbols = set()
-    for agent_name in agent_names:
-        account = Account.get(agent_name)
-        all_symbols.update(account.get_holdings().keys())
-    new_instruments = {symbol: get_security_id(symbol) for symbol in all_symbols}
-    
-    update_instruments(new_instruments)
+        # 6. Update live prices (if needed)for trader_name in trader_names:    
+        all_symbols = set()
+        for trader_name in trader_names:
+            account = Account.get(trader_name)
+            all_symbols.update(account.get_holdings().keys())
+        new_instruments = {symbol: get_security_id(symbol) for symbol in all_symbols}
+        
+        update_instruments(new_instruments)
 
-    return True, f"Buy executed: {quantity} {symbol} @ {entry_price} (stop: {stop_loss}, target: {target})"
+        print(f"[INFO] BUY TRADE EXECUTION COMPLETED: {quantity} {symbol} @ {entry_price} (stop: {stop_loss}, target: {target})")
+
+        return True, f"Buy executed: {quantity} {symbol} @ {entry_price} (stop: {stop_loss}, target: {target})"
+    
+
+    else:
+        logger.error(f"Failed to add position for {trader_name} on {symbol}: {msg}")
+        return False, f"Failed to execute buy: {msg}"
 
 
 
 def execute_sell(
-    agent_name: str,
+    trader_name: str,
     account: Account,
     position_manager: PositionManager,
     symbol: str,
@@ -159,7 +169,7 @@ def execute_sell(
             quantity = int(quantity)
         account.balance = float(account.balance)
     except Exception as e:
-        return False, f"Type conversion error: {e}"
+        return False, f"Type conversion error in Execute Sell: {e}"
 
 
     # 1. Check holdings
@@ -173,13 +183,12 @@ def execute_sell(
         if quantity >= position.quantity:
             # Mark as closed
             position.status = "CLOSED"
-            position_manager._save_closed_position(position)
+            position_manager._remove_position(position)
             position_manager._remove_position(symbol)
-            position_manager._remove_position_from_memory_file(symbol)
         else:
             # Reduce position size
             position.quantity -= quantity
-            position_manager._save_positions()
+            position_manager._save_position(symbol, position)
 
     # 3. Log trade in agent memory
     try:
@@ -193,10 +202,10 @@ def execute_sell(
         if account.holdings[symbol] <= 0:
             del account.holdings[symbol]
 
-        # 3. Update live prices (if needed)for agent_name in agent_names:
+        # 3. Update live prices (if needed)for trader_name in trader_names:
         all_symbols = set()
-        for agent_name in agent_names:
-            account = Account.get(agent_name)
+        for trader_name in trader_names:
+            account = Account.get(trader_name)
             all_symbols.update(account.get_holdings().keys())
         new_instruments = {symbol: get_security_id(symbol) for symbol in all_symbols}
         
@@ -207,7 +216,7 @@ def execute_sell(
             symbol=symbol,
             quantity=-quantity,
             price=sell_price,
-            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            timestamp=datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
             rationale=rationale
         ))
 
@@ -215,19 +224,18 @@ def execute_sell(
         account.save()
 
         # 6. Update agent memory (remove active positions and trade log)
-        agent_memory = AgentMemory(agent_name)
-        agent_memory.remove_active_position(symbol)
+        agent_memory = AgentMemory(trader_name)
         trade_details = {
             "symbol": symbol,
             "quantity": quantity,
             "execution_price": execution_price,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(IST).timestamp(),
             "type": "sell",
             "rationale": rationale,
             "status": "executed"
         }
         agent_memory.log_trade(trade_details)
-        DatabaseQueries.write_log(agent_name, "account", f"Sold {quantity} of {symbol}")
+        DatabaseQueries.write_log(trader_name, "account", f"Sold {quantity} of {symbol}")
 
         
     except Exception as e:
@@ -238,7 +246,7 @@ def execute_sell(
 
 
 def execute_stop_loss(
-    agent_name: str,
+    trader_name: str,
     account: Account,
     position_manager: PositionManager,
     symbol: str,
@@ -269,10 +277,10 @@ def execute_stop_loss(
         if account.holdings[symbol] <= 0:
             del account.holdings[symbol]
 
-        # 3. Update live prices (if needed)for agent_name in agent_names:
+        # 3. Update live prices (if needed)for trader_name in trader_names:
         all_symbols = set()
-        for agent_name in agent_names:
-            account = Account.get(agent_name)
+        for trader_name in trader_names:
+            account = Account.get(trader_name)
             all_symbols.update(account.get_holdings().keys())
         new_instruments = {symbol: get_security_id(symbol) for symbol in all_symbols}
         
@@ -283,7 +291,7 @@ def execute_stop_loss(
             symbol=symbol,
             quantity=-quantity,
             price=execution_price,
-            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            timestamp=datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
             rationale=rationale
         ))
 
@@ -291,13 +299,13 @@ def execute_stop_loss(
         account.save()
 
         # 6. Update agent memory (remove active position and log trade)
-        agent_memory = AgentMemory(agent_name)
+        agent_memory = AgentMemory(trader_name)
         agent_memory.remove_active_position(symbol)
         trade_details = {
             "symbol": symbol,
             "quantity": quantity,
             "execution_price": execution_price,
-            "timestamp": datetime.now().timestamp(),
+            "timestamp": datetime.now(IST).timestamp(),
             "type": "stop_loss",
             "rationale": rationale,
             "status": "executed"

@@ -1,76 +1,34 @@
-from agents import TracingProcessor, Trace, Span
-from data.database import DatabaseQueries
+from agents.memory import SQLiteSession
+from typing import Tuple
 import secrets
 import string
+import os
+import logging
 
-ALPHANUM = string.ascii_lowercase + string.digits 
+class TraceManager:
+    """Centralized trace management"""
+    
+    ALPHANUM = string.ascii_lowercase + string.digits
+    TRACE_DB_PATH = os.getenv("TRACE_DB_PATH", "accounts.db")
+    _logger = logging.getLogger(__name__)
+    
+    @classmethod
+    def make_trace_id(cls, tag: str) -> str:
+        """Generate unique trace ID"""
+        tag += "0"
+        pad_len = 32 - len(tag)
+        random_suffix = ''.join(secrets.choice(cls.ALPHANUM) for _ in range(pad_len))
+        return f"trace_{tag}{random_suffix}"
 
+    @classmethod
+    def get_shared_session(cls, trace_id: str) -> SQLiteSession:
+        """Get shared SQLite session"""
+        return SQLiteSession(db_path=cls.TRACE_DB_PATH, session_id=trace_id)
 
-def make_trace_id(tag: str) -> str:
-    """
-    Return a string of the form 'trace_<tag><random>',
-    where the total length after 'trace_' is 32 chars.
-    """
-    tag += "0"
-    pad_len = 32 - len(tag)
-    random_suffix = ''.join(secrets.choice(ALPHANUM) for _ in range(pad_len))
-    return f"trace_{tag}{random_suffix}"
-
-class LogTracer(TracingProcessor):
-
-    def get_name(self, trace_or_span: Trace | Span) -> str | None:
-        trace_id = trace_or_span.trace_id
-        name = trace_id.split("_")[1]
-        if '0' in name:
-            return name.split("0")[0]
-        else:
-            return None
-
-    def on_trace_start(self, trace) -> None:
-        name = self.get_name(trace)
-        if name:
-            DatabaseQueries.write_log(name, "trace", f"Started: {trace.name}")
-
-    def on_trace_end(self, trace) -> None:
-        name = self.get_name(trace)
-        if name:
-            DatabaseQueries.write_log(name, "trace", f"Ended: {trace.name}")
-
-    def on_span_start(self, span) -> None:
-        name = self.get_name(span)
-        type = span.span_data.type if span.span_data else "span"
-        if name:
-            message = "Started"
-            if span.span_data:
-                if span.span_data.type:
-                    message += f" {span.span_data.type}"
-                if hasattr(span.span_data, "name") and span.span_data.name:
-                    message += f" {span.span_data.name}"
-                if hasattr(span.span_data, "server") and span.span_data.server:
-                    message += f" {span.span_data.server}"
-            if span.error:
-                message += f" {span.error}"
-            DatabaseQueries.write_log(name, type, message)
-
-    def on_span_end(self, span) -> None:
-        name = self.get_name(span)
-        type = span.span_data.type if span.span_data else "span"
-        if name:
-            message = "Ended"
-            if span.span_data:
-                if span.span_data.type:
-                    
-                    message += f" {span.span_data.type}"
-                if hasattr(span.span_data, "name") and span.span_data.name:
-                    message += f" {span.span_data.name}"
-                if hasattr(span.span_data, "server") and span.span_data.server:
-                    message += f" {span.span_data.server}"
-            if span.error:
-                message += f" {span.error}"
-            DatabaseQueries.write_log(name, type, message)
-
-    def force_flush(self) -> None:
-        pass
-
-    def shutdown(self) -> None:
-        pass
+    @classmethod
+    def start_trace(cls, tag: str = "manager") -> Tuple[str, SQLiteSession]:
+        """Start new trace with session"""
+        trace_id = cls.make_trace_id(tag)
+        session = cls.get_shared_session(trace_id)
+        cls._logger.info(f"Started new trace for {tag}")
+        return (trace_id, session)

@@ -91,4 +91,4 @@ def fetch_bulk_historical_data(symbols: List[str]) -> dict:
 # if __name__ == "__main__":    
 #     symbols = ["RELIANCE", "TATAMOTORS", "HDFCBANK", "TCS", "INFY", "BBOX", "TATAPOWER", "ASTERDM"]
 #     historical_data = fetch_bulk_historical_data(symbols)
-#     print(historical_data)
+#     print(len(historical_data))

@@ -7,11 +7,13 @@ from scipy.stats import pearsonr
 import pandas as pd
 import talib as ta
 import numpy as np
+from data.schemas import IST
 import time
 from utils.redis_client import main_redis_client as r
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN # type: ignore
 
 
+#* Not using SMA
 def closing_sma_and_slope(symbol: str) -> dict:
     """ Calculate Simple Moving Averages (SMA) for a given symbol.
         To get bigger SMA values, you need to provide a longer date range.
@@ -37,7 +39,7 @@ def closing_sma_and_slope(symbol: str) -> dict:
     df['sma_50_slope'] = df['sma_50'].diff()
     df['sma_200_slope'] = df['sma_200'].diff()
 
-    lookback = 30
+    lookback = 20
     df_recent = df.tail(lookback).iloc[::-1]    
 
     return {
@@ -47,9 +49,7 @@ def closing_sma_and_slope(symbol: str) -> dict:
             "sma_200": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_200'].tolist()],
         },
         "slope": {
-            "sma_20_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_20_slope'].tolist()],
-            "sma_50_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_50_slope'].tolist()],
-            "sma_200_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['sma_200_slope'].tolist()],
+            "sma_trend": "up" if df['sma_20'].diff().iloc[-1] > 0 else "down"
         }
     }
 
@@ -79,7 +79,7 @@ def closing_ema_and_slope(symbol: str) -> dict:
     df['ema_50_slope'] = df['ema_50'].diff()
     df['ema_200_slope'] = df['ema_200'].diff()
 
-    lookback = 60
+    lookback = 20
     df_recent = df.tail(lookback).iloc[::-1]
 
     return {
@@ -89,9 +89,7 @@ def closing_ema_and_slope(symbol: str) -> dict:
             "ema_200": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_200'].tolist()],
         },
         "slope": {
-            "ema_20_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_20_slope'].tolist()],
-            "ema_50_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_50_slope'].tolist()],
-            "ema_200_slope": [round(x, 2) if not pd.isna(x) else None for x in df_recent['ema_200_slope'].tolist()],
+            "ema_trend": "up" if df['ema_50'].diff().iloc[-1] > 0 else "down"
         }
     }
 
@@ -119,18 +117,28 @@ def closing_macd(symbol: str, fast_period: int = 12, slow_period: int = 26, sign
         return None
 
     macd, signal, hist = ta.MACD(df['close'], fastperiod=fast_period, slowperiod=slow_period, signalperiod=signal_period)
-    lookback = 30
+    return {
+        "current": {
+            "macd": float(round(macd.iloc[-1], 3)),
+            "signal": float(round(signal.iloc[-1], 3)),
+            "histogram": float(round(hist.iloc[-1], 3))
+        },
+        "trend": "bullish" if macd.iloc[-1] > signal.iloc[-1] else "bearish"
+    }
 
-    macd_recent = macd.tail(lookback).iloc[::-1]
-    signal_recent = signal.tail(lookback).iloc[::-1]
-    hist_recent = hist.tail(lookback).iloc[::-1]
+    #* Below code gives last 20 days MACD values
+    # lookback = 20
+
+    # macd_recent = macd.tail(lookback).iloc[::-1]
+    # signal_recent = signal.tail(lookback).iloc[::-1]
+    # hist_recent = hist.tail(lookback).iloc[::-1]
 
     
-    return {
-        "macd": [round(x, 3) if not pd.isna(x) else None for x in macd_recent.tolist()],
-        "signal": [round(x, 3) if not pd.isna(x) else None for x in signal_recent.tolist()],
-        "histogram": [round(x, 3) if not pd.isna(x) else None for x in hist_recent.tolist()]
-    }
+    # return {
+    #     "macd": [round(x, 3) if not pd.isna(x) else None for x in macd_recent.tolist()],
+    #     "signal": [round(x, 3) if not pd.isna(x) else None for x in signal_recent.tolist()],
+    #     "histogram": [round(x, 3) if not pd.isna(x) else None for x in hist_recent.tolist()]
+    # }
 
 
 def closing_rsi(symbol: str, period: int = 14) -> float:
@@ -183,17 +191,28 @@ def closing_bollinger_bands(symbol: str, period: int = 20, std_dev: float = 2.0)
         return None
 
     upper_band, middle_band, lower_band = ta.BBANDS(df['close'], timeperiod=period, nbdevup=std_dev, nbdevdn=std_dev)
-    lookback = 30
-
-    upper_band_recent = upper_band.tail(lookback).iloc[::-1]
-    middle_band_recent = middle_band.tail(lookback).iloc[::-1]
-    lower_band_recent = lower_band.tail(lookback).iloc[::-1]
-
     return {
-        "upper_band": [round(x, 3) if not pd.isna(x) else None for x in upper_band_recent.tolist()],
-        "middle_band": [round(x, 3) if not pd.isna(x) else None for x in middle_band_recent.tolist()],
-        "lower_band": [round(x, 3) if not pd.isna(x) else None for x in lower_band_recent.tolist()]
+        "current": {
+            "upper": float(round(upper_band.iloc[-1], 3)),
+            "middle": float(round(middle_band.iloc[-1], 3)),
+            "lower": float(round(lower_band.iloc[-1], 3))
+        },
+        "position": "upper" if df['close'].iloc[-1] > upper_band.iloc[-1] else 
+                   "lower" if df['close'].iloc[-1] < lower_band.iloc[-1] else "middle"
     }
+
+    #* Below code gives last 20 days Bollinger Bands values
+    # lookback = 20
+
+    # upper_band_recent = upper_band.tail(lookback).iloc[::-1]
+    # middle_band_recent = middle_band.tail(lookback).iloc[::-1]
+    # lower_band_recent = lower_band.tail(lookback).iloc[::-1]
+
+    # return {
+    #     "upper_band": [round(x, 3) if not pd.isna(x) else None for x in upper_band_recent.tolist()],
+    #     "middle_band": [round(x, 3) if not pd.isna(x) else None for x in middle_band_recent.tolist()],
+    #     "lower_band": [round(x, 3) if not pd.isna(x) else None for x in lower_band_recent.tolist()]
+    # }
 
 
 # ==================== ADVANCED TOOLS ==================== #
@@ -355,16 +374,27 @@ def analyze_volume_patterns(symbol: str) -> dict:
 
         return {
             "symbol": symbol,
-            "signals": signals,
-            "overall_volume_score": float(round(weighted_score, 3)),
-            "confidence_percentage": float(round(confidence, 1)),
-            "volume_trend": volume_trend,
-            "volume_strength": volume_strength,
-            "current_volume": int(last_vol),
-            "average_volume_20d": int(avg_vol_20),
-            "volume_ratio": float(round(last_vol / avg_vol_20, 2)) if avg_vol_20 else 0.0,
-            "details": f"Enhanced volume analysis over {len(df)} periods with {len(signals)} indicators and {confidence:.1f}% confidence."
+            "summary": {
+                "volume_score": float(round(weighted_score, 3)),
+                "trend": volume_trend,
+                "strength": volume_strength
+            },
+            "key_signals": [s for s in signals if s["score"] > 0.5]  # Only include strong signals
         }
+    
+        #* Below is the detailed return structure
+        # return {
+        #     "symbol": symbol,
+        #     "signals": signals,
+        #     "overall_volume_score": float(round(weighted_score, 3)),
+        #     "confidence_percentage": float(round(confidence, 1)),
+        #     "volume_trend": volume_trend,
+        #     "volume_strength": volume_strength,
+        #     "current_volume": int(last_vol),
+        #     "average_volume_20d": int(avg_vol_20),
+        #     "volume_ratio": float(round(last_vol / avg_vol_20, 2)) if avg_vol_20 else 0.0,
+        #     "details": f"Enhanced volume analysis over {len(df)} periods with {len(signals)} indicators and {confidence:.1f}% confidence."
+        # }
     except Exception as e:
         return {
             "symbol": symbol,
@@ -1507,15 +1537,11 @@ def calculate_support_resistance_levels(symbol: str, bins: int = 15) -> dict:
                 types = [x['type'] for x in cluster_levels]
                 main_type = max(set(types), key=types.count)
                 
-                # Combine sources
-                sources = list(set([x['source'] for x in cluster_levels]))
                 
                 clustered_levels.append({
                     "level": float(round(weighted_level, 4)),
                     "type": main_type,
-                    "strength": float(round(combined_strength, 3)),
-                    "source": f"Cluster_{len(cluster_levels)}",
-                    "sources": sources,
+                    "strength": float(round(combined_strength, 3)),                    
                     "count": len(cluster_levels)
                 })
         
@@ -1533,7 +1559,7 @@ def calculate_support_resistance_levels(symbol: str, bins: int = 15) -> dict:
         )
         
         # Limit to top levels
-        top_levels = clustered_levels[:30]
+        top_levels = clustered_levels[:10]
         
         # Add distance from current price
         for level in top_levels:
@@ -1542,8 +1568,8 @@ def calculate_support_resistance_levels(symbol: str, bins: int = 15) -> dict:
             ))
         
         # Separate into support, resistance, and neutral
-        support = [x for x in top_levels if x['level'] < current_price * 0.995]
-        resistance = [x for x in top_levels if x['level'] > current_price * 1.005]
+        support = [x for x in top_levels if x['level'] < current_price * 0.985]
+        resistance = [x for x in top_levels if x['level'] > current_price * 1.015]
         neutral = [x for x in top_levels if x not in support and x not in resistance]
         
         return {
@@ -2577,35 +2603,46 @@ def momentum_indicators(symbol: str) -> dict:
         f"Confidence level: {confidence:.0f}%. "
         f"Composite momentum score: {momentum_score:.2f} (-1 to 1 scale)."
     )
-    
-    # Final result
+
     return {
         "symbol": symbol,
-        "status": "success",
-        "timestamp": datetime.now().isoformat(),
-        "data_period": f"{len(df)} periods",
-        "current_values": current_values,
-        "indicator_analysis": indicator_analysis,
-        "overall_assessment": {
+        "summary": {
             "momentum_score": float(round(momentum_score, 3)),
-            "recommendation": recommendation,
-            "confidence": float(round(confidence, 1)),
-            "strength": strength,
-            "trend_alignment": indicator_analysis["trend_strength"]["trend_direction"],
-            "market_conditions": market_regime
+            "recommendation": recommendation.split()[0],
+            "confidence": float(round(confidence, 1))
         },
-        "market_regime": market_regime,
-        "trend_strength": float(round(trend_strength * 100, 1)),
-        "analysis_summary": analysis_summary,
-        "recommendation": recommendation.split()[0],  # Just "bullish", "bearish" or "neutral"
-        "confidence": float(round(confidence, 1)),
-        "momentum_score": float(round(momentum_score, 3)),
-        "strength_assessment": strength,
-        "key_insights": key_insights,
-        "signals": signals,
-        "risk_metrics": risk_metrics
+        "key_signals": [
+            indicator for indicator in signals["confirmed_by"][:3]  # Only top 3 confirming signals
+        ]
     }
-
+    
+    #* Below is the detailed Final result
+    # return {
+    #     "symbol": symbol,
+    #     "status": "success",
+    #     "timestamp": datetime.now(IST).isoformat(),
+    #     "data_period": f"{len(df)} periods",
+    #     "current_values": current_values,
+    #     "indicator_analysis": indicator_analysis,
+    #     "overall_assessment": {
+    #         "momentum_score": float(round(momentum_score, 3)),
+    #         "recommendation": recommendation,
+    #         "confidence": float(round(confidence, 1)),
+    #         "strength": strength,
+    #         "trend_alignment": indicator_analysis["trend_strength"]["trend_direction"],
+    #         "market_conditions": market_regime
+    #     },
+    #     "market_regime": market_regime,
+    #     "trend_strength": float(round(trend_strength * 100, 1)),
+    #     "analysis_summary": analysis_summary,
+    #     "recommendation": recommendation.split()[0],  # Just "bullish", "bearish" or "neutral"
+    #     "confidence": float(round(confidence, 1)),
+    #     "momentum_score": float(round(momentum_score, 3)),
+    #     "strength_assessment": strength,
+    #     "key_insights": key_insights,
+    #     "signals": signals,
+    #     "risk_metrics": risk_metrics
+    # }
 
 
 # ====================  ADDITIONAL UTILITY FUNCTIONS ==================== #

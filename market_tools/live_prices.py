@@ -16,6 +16,7 @@ data_lock = threading.Lock()
 def update_instruments(new_instruments):
     global INSTRUMENTS
     INSTRUMENTS = new_instruments
+    
     # Update live_prices in-place
     with data_lock:        
         for symbol in list(live_prices.keys()):
