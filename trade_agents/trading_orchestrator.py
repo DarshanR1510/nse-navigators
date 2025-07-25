@@ -232,11 +232,6 @@ class TradingOrchestrator:
 
         #! PHASE 4: Execution
         if hasattr(decision_results, 'decision') and decision_results.decision == "TRADE":
-
-            logging.info(f"[EXECUTION] Trade candidate: {decision_results.trade_candidate}")
-            logging.info(f"[EXECUTION] Watchlist: {decision_results.watchlist}")
-            logging.info(f"[EXECUTION] Decision: {decision_results.decision}")
-
             
             trade_candidate = await self._calculate_position_size(decision_results.trade_candidate)
             if not trade_candidate:

@@ -124,17 +124,7 @@ class ManagerAgent(BaseTradeAgent):
             decision_context = await self._prepare_decision_context(context)            
             serialized_context = self._serialize_context(decision_context)        
             
-            decision = await self._get_llm_decision(serialized_context)                
-
-            if "```json" in decision.lower():
-                decision = decision.replace("```JSON", "```json")
-                decision = decision.split("```json")[1].split("```")[0].strip()
-            
-            elif "```" in decision:
-                decision = decision.split("```")[1].split("```")[0].strip()
-                # Remove "JSON\n" if present at the start
-                if decision.startswith("JSON\n"):
-                    decision = decision[len("JSON\n"):].strip()
+            decision = await self._get_llm_decision(serialized_context)                            
 
             if decision == "RESEARCH" and not await self._should_seek_new_positions(context.get("portfolio_status", {})):
                 self.logger.info("Research decision overridden due to position constraints")
@@ -200,6 +190,17 @@ class ManagerAgent(BaseTradeAgent):
                 except json.JSONDecodeError:
                     # If not JSON, use string directly
                     decision = output.strip().upper()
+
+            elif "```json" in decision.lower():
+                decision = decision.replace("```JSON", "```json")
+                decision = decision.split("```json")[1].split("```")[0].strip()
+            
+            elif "```" in decision:
+                decision = decision.split("```")[1].split("```")[0].strip()
+                # Remove "JSON\n" if present at the start
+                if decision.startswith("JSON\n"):
+                    decision = decision[len("JSON\n"):].strip()
+
 
             # Validate decision
             if not decision or decision not in self.VALID_DECISIONS:
@@ -385,11 +386,11 @@ class ManagerAgent(BaseTradeAgent):
             if portfolio_risk > self.risk_limits.max_portfolio_risk:
                 return False
 
-            # Check market hours (basic check)
-            if self.check_market_hours:
-                current_time = datetime.now(IST)
-                if current_time.hour < 9 or current_time.hour > 16:
-                    return False
+            # Check market hours (basic check)  #TODO Uncomment this block
+            # if self.check_market_hours:
+            #     current_time = datetime.now(IST)
+            #     if current_time.hour < 9 or current_time.hour > 16:
+            #         return False
 
             return True
 
