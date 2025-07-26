@@ -149,38 +149,6 @@ class Trader:
             return px.line(title="Error loading chart")
 
 
-    def get_holdings_df(self) -> pd.DataFrame:
-        """Convert holdings to DataFrame for display"""
-        try:
-            holdings = self.account.get_holdings()
-            if not holdings:
-                return pd.DataFrame(columns=["Symbol", "Quantity", "Live Price"])
-            
-            rows = []
-            with data_lock:
-                for symbol, quantity in holdings.items():
-                    ltp = convert_to_native(live_prices.get(symbol, {}).get("LTP", 0.0))
-                    prev_ltp = convert_to_native(live_prices.get(symbol, {}).get("prev_LTP", ltp))
-                    quantity = convert_to_native(quantity)
-                    
-                    color = mapper.get("function").value if ltp > prev_ltp else (
-                        mapper.get("account").value if ltp < prev_ltp else mapper.get("trace").value
-                    )
-                    
-                    # Use HTML for colored cell
-                    price_html = f"<span style='color:{color};font-weight:bold'>{float(ltp):.2f}</span>"
-                    rows.append({
-                        "Symbol": str(symbol),
-                        "Quantity": int(quantity),
-                        "Live Price": price_html
-                    })
-            
-            df = pd.DataFrame(rows)
-            return df_to_native(df)
-        except Exception as e:
-            print(f"Error in get_holdings_df: {e}")
-            return pd.DataFrame(columns=["Symbol", "Quantity", "Live Price"])
-
 
     def get_holdings_html(self) -> str:
         try:
@@ -342,16 +310,16 @@ class Trader:
             return f"""
             <div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:8px;'>
                 <div style='background:rgba(0,0,0,0.2);padding:12px;border-radius:8px;text-align:center;'>
-                    <div style='color:#888;font-size:12px;margin-bottom:4px;'>Available Balance</div>
-                    <div style='font-size:18px;color:#4ecdc4;'>₹{cash_available}</div>
+                    <div style='color:#888;font-size:14px;margin-bottom:4px;'>Available Balance</div>
+                    <div style='font-size:20px;color:#4ecdc4;'>₹{cash_available}</div>
                 </div>
                 <div style='background:rgba(0,0,0,0.2);padding:12px;border-radius:8px;text-align:center;'>
-                    <div style='color:#888;font-size:12px;margin-bottom:4px;'>Active Positions</div>
-                    <div style='font-size:18px;color:#45b7d1;'>{total_positions}</div>
+                    <div style='color:#888;font-size:14px;margin-bottom:4px;'>Active Positions</div>
+                    <div style='font-size:20px;color:#45b7d1;'>{total_positions}</div>
                 </div>
                 <div style='background:rgba(0,0,0,0.2);padding:12px;border-radius:8px;text-align:center;'>
-                    <div style='color:#888;font-size:12px;margin-bottom:4px;'>Portfolio P&L</div>
-                    <div style='font-size:18px;color:{color};'>
+                    <div style='color:#888;font-size:14px;margin-bottom:4px;'>Portfolio P&L</div>
+                    <div style='font-size:20px;color:{color};'>
                         {pnl_symbol} {abs(pnl_percentage):.2f}%
                     </div>
                 </div>
@@ -422,8 +390,8 @@ class Trader:
 
         if status != "Monitoring":
             spinner = f"""
-            <div class="spinner" style="display:inline-block;margin-right:8px;">
-                <div style="width:8px;height:8px;background:{color};border-radius:50%;
+            <div class="spinner" style="display:inline-block;margin-right:12px;">
+                <div style="width:12px;height:12px;background:{color};border-radius:30%;
                         animation:pulse 1s infinite;"></div>
             </div>
             """
@@ -431,7 +399,7 @@ class Trader:
             spinner = ""
             
         return f"""
-        <div style="display:flex;align-items:center;justify-content:center;padding:4px 12px;
+        <div style="display:flex;align-items:center;justify-content:center;padding:6px 12px;
                     background:rgba(0,0,0,0.2);border-radius:12px;margin:8px 0;">
             {spinner}
             <span style="color:{color}">{status_text}</span>
@@ -637,6 +605,9 @@ def create_ui():
 
 
 if __name__ == "__main__":
+    fonts = os.path.abspath("static/fonts")
     ui = create_ui()
-    share_ui = os.getenv("UI_SHARE", "False").lower() == "true"
-    ui.launch(inbrowser=True, share=share_ui)
+    ui.launch(
+        inbrowser=True,
+        allowed_paths=[fonts] 
+    )
