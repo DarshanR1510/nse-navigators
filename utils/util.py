@@ -1,4 +1,5 @@
 from enum import Enum
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -11,16 +12,16 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 css = """
-/* Base styles */
+/* -------- BACKGROUND -------- */
 body {
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e) fixed !important;
     background-size: 400% 400% !important;
-    animation: gradient 15s ease infinite !important;    
+    animation: gradient 15s ease infinite !important;
     color: #ddd !important;
+    font-family: 'gt-planar', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     position: relative !important;
 }
 
-/* Add the overlay gradient */
 body::before {
     content: "" !important;
     position: fixed !important;
@@ -34,19 +35,20 @@ body::before {
     pointer-events: none !important;
 }
 
-/* Ensure content stays above the gradient */
+/* -------- CONTAINER DEPTH -------- */
 #root, .gr-block, .trader-card, .value-card {
     position: relative !important;
     z-index: 1 !important;
 }
 
+/* -------- GRADIENT ANIMATION -------- */
 @keyframes gradient {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
 
-/* Glass morphism cards */
+/* -------- CARD STYLES -------- */
 .gr-block, .trader-card, .value-card {
     background: rgba(24, 26, 27, 0.4) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -57,11 +59,13 @@ body::before {
     transition: all 0.3s ease !important;
 }
 
-.gr-block:hover {
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4) !important;
-    transform: translateY(-2px) !important;
+.gr-block:hover, .trader-card:hover {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5) !important;
+    transform: translateY(-4px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
+/* -------- SPINNER / PULSE -------- */
 .spinner {
     animation: rotate 1s linear infinite;
 }
@@ -71,7 +75,7 @@ body::before {
     100% { opacity: 1; }
 }
 
-/* Card headers */
+/* -------- HEADERS / TYPOGRAPHY -------- */
 .card-header {
     background: rgba(33,33,33,0.5) 100% !important;
     border-bottom: 1px solid rgba(255,255,255,0.1) !important;
@@ -81,43 +85,95 @@ body::before {
     letter-spacing: 1px !important;
     font-size: 14px !important;
     color: #ccc !important;
+    font-family: 'gt-planar', sans-serif !important;
 }
 
-/* Data tables */
-.dataframe-fix .table-wrap {
-    background: rgba(30, 30, 30, 0.6) !important;
-    border-radius: 12px !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+h1, h2, h3, h4, h5 {
+    color: #aaf !important;
+    font-family: 'gt-planar', sans-serif !important;
 }
 
-.gr-block:hover, .trader-card:hover {
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5) !important;
-    transform: translateY(-4px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+/* -------- FONTS: GT PLANAR -------- */
+@font-face {
+    font-family: 'gt-planar';
+    src: url('static/fonts/gt-planar-black.otf') format('opentype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
 }
 
-/* Scrollbars */
+@font-face {
+    font-family: 'gt-planar';
+    src: url('static/fonts/gt-planar-bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'gt-planar';
+    src: url('static/fonts/gt-planar-medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'gt-planar';
+    src: url('static/fonts/gt-planar-regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'gt-planar';
+    src: url('static/fonts/gt-planar-light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'gt-planar';
+    src: url('static/fonts/gt-planar-thin.otf') format('opentype');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Force gt-planar globally */
+.gr-block, .trader-card, .value-card, .card-header,
+.gr-column, .gr-group, .gr-html, h1, h2, h3, h4, h5,
+p, div {
+    font-family: gt-planar, sans-serif !important;
+    font-synthesis: none !important;
+}
+
+/* Log area styling */
+span {
+    font-family: 'Courier New', monospace !important;
+}
+
+/* Transaction history should keep its monospace font */
+.dataframe-fix, .dataframe-fix * {
+    font-family: 'Courier New', monospace !important;
+}
+
+/* -------- SCROLLBARS -------- */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
-
 ::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #4b6cb7, #182848);
     border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #5a7bc7, #283858);
 }
 
-/* Typography */
-h1, h2, h3, h4, h5 {
-    color: #aaf !important;
-}
-
-/* PNL colors */
+/* -------- PNL COLORS -------- */
 .positive-pnl {
     color: #00ff99 !important;
     font-weight: bold;
@@ -135,69 +191,24 @@ h1, h2, h3, h4, h5 {
     font-weight: bold;
 }
 
-/* Log area styling */
-span {
-    font-family: 'Courier New', monospace !important;
+/* -------- TABLE FIXES -------- */
+.dataframe-fix .table-wrap {
+    background: rgba(30, 30, 30, 0.6) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
 }
 
-/* Layout spacing */
+/* -------- GRID SPACING -------- */
 .gr-row {
     margin-top: 12px !important;
     margin-bottom: 12px !important;
 }
 
-/* Hide default footer */
+/* -------- HIDE FOOTER -------- */
 footer {
     display: none !important;
 }
-
-@font-face {
-    font-family: 'GT Planar';
-    src: url('/utils/gt_planar_font/GT-Planar-Black.otf') format('opentype');
-    font-weight: 900;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'GT Planar';
-    src: url('/utils/gt_planar_font/GT-Planar-Bold.otf') format('opentype');
-    font-weight: 700;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'GT Planar';
-    src: url('/utils/gt_planar_font/GT-Planar-Medium.otf') format('opentype');
-    font-weight: 500;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'GT Planar';
-    src: url('/utils/gt_planar_font/GT-Planar-Regular.otf') format('opentype');
-    font-weight: 400;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'GT Planar';
-    src: url('/utils/gt_planar_font/GT-Planar-Light.otf') format('opentype');
-    font-weight: 300;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'GT Planar';
-    src: url('/utils/gt_planar_font/GT-Planar-Thin.otf') format('opentype');
-    font-weight: 100;
-    font-style: normal;
-}
-
-/* Apply GT Planar everywhere except transactions history */
-body, html, .gr-block, .trader-card, .value-card, .card-header, .gr-column, .gr-group, .gr-html {
-    font-family: 'GT Planar', 'Inter', sans-serif !important;
-}
-
-/* Exclude transactions history section */
-.dataframe-fix, .dataframe-fix * {
-    font-family: 'Inter', 'Courier New', monospace !important;
-}
-
 """
 
 js = """
@@ -210,7 +221,6 @@ function refresh() {
     }
 }
 """
-
 
 class Color(Enum):
     RED = "#ff3366"
