@@ -15,8 +15,8 @@ researcher_mcp_server_params = [
 ]
 
 memory_mcp_server_params = [
-    {"name": "memory", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]},
     {"command": "python", "args": ["-m", "mcp_servers.memory_server"]},
+    {"name": "memory", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]},
 ]
 
 fundamental_mcp_server_params = [

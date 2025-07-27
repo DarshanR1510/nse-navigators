@@ -360,6 +360,7 @@ def decision_instructions(name: str, strategy: str):
          - Show high-quality setups both fundamentally & technically  
          - Are not already in the portfolio (skip existing holdings)  
          - Fit within the portfolio's capital & risk constraints
+         - You strictly give output in the given JSON format below.
 
       **SELECTION CRITERIA**
          1. Average conviction score must be ≥ 8, otherwise say NO TRADE
@@ -378,7 +379,8 @@ def decision_instructions(name: str, strategy: str):
          - If multiple candidates are close, prefer those with better risk/reward profiles.
          - If you are planning to add any symbol in watchlist, choose max 1 symbol.
 
-      ** Each candidate's technical report contains entry, stop-loss, and target price.      
+      ** Each candidate's technical report contains entry, stop-loss, and target price.   
+      ** DO NOT CALCULATE POSITION SIZE HERE, DEFAULT TO 10 QUANTITY.   
 
       ** Watchlist Management:
          - For symbols that has very good conviction, and you feel to hold and with moderate scores or potential but not trade-worthy now, Add To Watchlist.
@@ -395,7 +397,8 @@ def decision_instructions(name: str, strategy: str):
       "trade_candidate": 
          {{
             "symbol": "SYMBOL",
-            "entry_price": 0.0,            
+            "entry_price": 0.0,   
+            "quantity": 10,         // Default to 10
             "stop_loss": 0.0,
             "target_price": 0.0,
             "reason": "Provide reason in max 15 words, only major points, no fluff."

@@ -50,8 +50,8 @@ class MCPServerManager:
 
     async def get_researcher_servers(self) -> Tuple[List[MCPServerStdio], List[MCPServerStdio]]:
         """Get researcher and memory servers"""
-        researcher = await self.get_servers('researcher', researcher_mcp_server_params)
         memory = await self.get_servers('memory', memory_mcp_server_params)
+        researcher = await self.get_servers('researcher', researcher_mcp_server_params)
         return researcher, memory
 
 

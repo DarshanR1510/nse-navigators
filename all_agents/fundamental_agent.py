@@ -68,7 +68,7 @@ class FundamentalAgent(BaseTradeAgent):
             result = await Runner.run(
                 self._agent,
                 input=f"{input_text}, \nAnalyze these symbols: {json.dumps(symbols_data)}",
-                session=self.session,
+                # session=self.session,
                 max_turns=15
             )
 

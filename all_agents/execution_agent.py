@@ -56,7 +56,7 @@ class ExecutionAgent(BaseTradeAgent):
             result = await Runner.run(
                 self._agent,
                 input=f"{input_text}\nExecute the given trade:\n{trade_candidate_str}",
-                session=self.session,
+                # session=self.session,
                 max_turns=5
             )
             
