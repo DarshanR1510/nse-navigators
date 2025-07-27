@@ -64,7 +64,7 @@ class DecisionAgent(BaseTradeAgent):
             result = await Runner.run(
                 self._agent,
                 input=f"{input_text}, \nDecide which are to trade, or add to watchlist or no trade based on these analysis reports: {json.dumps(analysis_data)}",
-                session=self.session                
+                # session=self.session                
             )            
             
             # When No Trade is returned, we need to return None

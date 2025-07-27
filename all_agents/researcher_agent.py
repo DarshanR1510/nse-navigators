@@ -35,10 +35,11 @@ class ResearcherAgent(BaseTradeAgent):
             researcher_servers, memory_servers = await setup_researcher_mcp_servers()
             
             self._servers = [
+                memory_servers[0],      # get_market_context
                 researcher_servers[0],  # fetch
                 researcher_servers[1],  # serper
                 researcher_servers[2],  # brave
-                memory_servers[0],      # get_market_context
+
             ]
         
         if not self._agent:
@@ -77,7 +78,7 @@ class ResearcherAgent(BaseTradeAgent):
             result = await Runner.run(
                 self._agent,
                 input=f"{input_text} {json.dumps(context, default=str)}",
-                session=self.session,
+                # session=self.session,
                 max_turns=30
             )
 

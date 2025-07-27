@@ -185,21 +185,25 @@ class ManagerAgent(BaseTradeAgent):
             elif isinstance(output, str):
                 try:
                     # Try parsing as JSON first
-                    parsed = json.loads(output)
+                    if "```json" in output.lower():
+                        decision = output.replace("```JSON", "```json")
+                        decision = decision.split("```json")[1].split("```")[0].strip()
+
+                    elif "```" in output:
+                        decision = output.split("```")[1].split("```")[0].strip()
+                        # Remove "JSON\n" if present at the start
+                        if decision.startswith("JSON\n"):
+                            decision = decision[len("JSON\n"):].strip()
+                    
+                    else:
+                        decision = output.strip()
+
+                    parsed = json.loads(decision)
                     decision = parsed.get("decision", "").strip().upper()
+                
                 except json.JSONDecodeError:
                     # If not JSON, use string directly
-                    decision = output.strip().upper()
-
-            elif "```json" in decision.lower():
-                decision = decision.replace("```JSON", "```json")
-                decision = decision.split("```json")[1].split("```")[0].strip()
-            
-            elif "```" in decision:
-                decision = decision.split("```")[1].split("```")[0].strip()
-                # Remove "JSON\n" if present at the start
-                if decision.startswith("JSON\n"):
-                    decision = decision[len("JSON\n"):].strip()
+                    decision = output.strip().upper()        
 
 
             # Validate decision

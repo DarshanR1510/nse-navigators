@@ -235,11 +235,10 @@ class TradingOrchestrator:
             
             trade_candidate = await self._calculate_position_size(decision_results.trade_candidate)
             if not trade_candidate:
-                return await self._handle_failure("POSITION_SIZING", Exception("Failed to calculate position size"))
-                            
-            decision_results.trade_candidate = trade_candidate            
+                return await self._handle_failure("POSITION_SIZING", Exception("Failed to calculate position size"))                                                
             
             DatabaseQueries.write_log(self.trader_name, "agent", f"🕹️ Execution agent is in action ...")
+            
             execution_results = await self._execute_trades(trade_candidate)
 
             if not execution_results.get("trades_executed"):

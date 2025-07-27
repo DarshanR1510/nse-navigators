@@ -142,7 +142,7 @@ def resolve_symbol_impl(company_query: str) -> Optional[str]:
             display_ratio = SequenceMatcher(None, query_lower, display_lower).ratio()
             
             max_fuzzy_ratio = max(symbol_ratio, name_ratio, display_ratio)
-            if max_fuzzy_ratio >= 0.85:  # High similarity threshold
+            if max_fuzzy_ratio >= 0.70:  # High similarity threshold
                 fuzzy_matches.append((symbol, max_fuzzy_ratio))
                 continue
             
