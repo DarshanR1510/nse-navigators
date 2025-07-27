@@ -8,58 +8,95 @@
 
 ## 🌟 Key Features
 
-- **Multi-Agent Intelligence:**
-  - Six specialized AI agents, each with unique trading strategies and risk management protocols.
-  - Agents autonomously research, analyze, and execute trades on Indian stocks.
-  
-  **Agent Types:**
-  - **Manager Agent:** Oversees the entire trading workflow, monitors portfolio, coordinating other agents.
-  - **Research Agent:** Conducts in-depth research on stocks, sectors, and market trends.
-  - **Fundamental Analyst Agent:** Analyzes financial statements, ratios, and company fundamentals.
-  - **Technical Analyst Agent:** Performs technical analysis using advanced indicators and chart patterns.
-  - **Decision Agent:** Takes the reports from technical and fundamental agents to pick the best stocks.
-  - **Execution Agent:** Executes trades based on decisions made by the Manager Agent
+### 🤖 Multi-Agent Intelligence
+- **Six Specialized AI Agents:**
+  - **Manager Agent:** Oversees workflow, monitors portfolio status, coordinates other agents, and makes high-level decisions.
+  - **Research Agent:** Conducts in-depth research to identify top 4-6 stocks based on market trends and screener data.
+  - **Fundamental Analyst Agent:** Deep-dives into financial statements, ratios, and company fundamentals using screener data.
+  - **Technical Analyst Agent:** Advanced technical analysis with comprehensive toolset:
+    - Standard Indicators: SMA, EMA, Bollinger Bands, RSI, MACD
+    - Advanced Analysis: Pattern recognition, Volume patterns, Breakout detection
+    - Custom Tools: Support/Resistance levels, NIFTY relative strength, Momentum indicators
+  - **Decision Agent:** Evaluates research and analysis to select best trading candidates
+  - **Execution Agent:** Handles order execution, position tracking, and trade management
 
-- **Integrated Financial Data & Symbol Tools:**
-  - Fast, robust symbol resolution and financial data extraction using MCP tools.
-  - Batch and cached price fetching with rate-limit-safe, multi-agent support.
-  - Analyzes past one year of data for each stock to identify trends and patterns.
-  - Analyzes financial data to identify undervalued stocks.
+### 📈 Integrated Financial Data & Tools
+- **Real-time Market Data:**
+  - Fast, robust symbol resolution with Redis caching
+  - Rate-limit compliant price fetching (1-sec)
+  - Historical data analysis with 1-hour TTL
+  - Screener data integration for fundamentals
 
-- **Agentic Workflows:**
-  - Agents coordinate: one scouts market opportunities (news/trends), others perform deep financial, fundamental, and technical analysis.
-  - All actions are transparent and traceable via a live dashboard.
+### 🛡️ Risk Management
+- **Comprehensive Controls:**
+  - Position size: Max 8% per position
+  - Sector exposure: 25% limit
+  - Daily loss: 3% limit
+  - Portfolio risk: 15% max
+  - Risk/Reward: Minimum 1.5
+  - Position limits: 15 total, 3 new per day
+  - Stop-loss monitoring: Every 5 minutes during market hours
+  - Emergency protocols: 8% daily loss trigger
 
-- **Modern UI:**
-  - Intuitive Gradio dashboard for real-time monitoring of agent activities, trades, and portfolio performance.
+### 🧠 Agentic Workflows
+- Coordinated agent actions
+- Multi-model LLM support:
+  - GPT-4
+  - DeepSeek
+  - Gemini
+- Transparent decision trails
+- Agent memory persistence
 
-- **MCP Tooling:**
-  - Modular, async-ready MCP tools and servers for symbol resolution, price/financials fetching, and Playwright-powered scraping.
+### 💻 Modern UI
+- **Live Dashboard:**
+  - Real-time portfolio metrics
+  - Individual position P&L tracking
+  - Agent activity monitoring
+  - Trade execution logs
+  - Customizable trader strategies
+  - Market status indicators
 
-- **Robust Engineering:**
-  - Global, thread-safe price cache (5-min TTL, 1-sec API rate limit compliance).
-  - End-to-end error handling, async best practices, and modular project structure.
-  - Redis integration for fast, in-memory symbol resolution and caching.
+### 🔧 Robust Engineering
+- **Architecture:**
+  - Global, thread-safe price cache (5-min TTL)
+  - Redis for fast data access
+  - Async-first design
+  - Modular MCP tools
+  - End-to-end error handling
 
 ---
 
 ## 🤖 How It Works
 
 1. **Manager Decides:**
-   - At every market hour, the Manager Agent decides the next action based on portfolio status and market conditions.
-2. **Researcher Agent:**
-   - If the decision is to research, it fetches news, trends, and performs deep analysis using LLMs. and filter out 4-6 stocks.
-3. **Fundamental & Technical Workflows:**
-   - Those stocks get further analyzed by the Fundamental Analyst and Technical Analyst Agents.
-   - They generate detailed reports on each stock's financial health and technical indicators.
-4. **Decision Work:**
-   - Those reports are sent to the Decision Agent, which evaluates and selects the best candidates for trading.
+   - At every market hour, evaluates portfolio and market conditions
+   - Makes strategic decisions based on current state
+
+2. **Research Phase:**
+   - Research Agent identifies 4-6 potential stocks
+   - Uses market trends and fundamental data
+
+3. **Analysis Phase:**
+   - Fundamental Agent: Deep financial analysis
+   - Technical Agent: Comprehensive technical indicators
+   - Both generate detailed analysis reports
+
+4. **Decision Making:**
+   - Decision Agent evaluates all analyses
+   - Selects best candidates for trading
+   - Sets entry, target, and stop-loss levels
+
 5. **Execution:**
-    - The Execution Agent executes trades based on the Decision Agent's recommendations.
-    - Sends a push notification with trade details.
-    - Sets a stop-loss and take-profit or book loss for each trade.
-6. **Live Dashboard:**
-   - Monitor agent actions, activity logs, trades, and portfolio value, strategies and transactions in a beautiful UI.
+   - Execution Agent handles orders
+   - Implements position sizing rules
+   - Sets up stop-loss monitoring
+   - Sends trade notifications
+
+6. **Monitoring:**
+   - Real-time position tracking
+   - 5-minute stop-loss checks
+   - Portfolio risk monitoring
+   - Performance analytics
 
 ---
 
@@ -74,6 +111,11 @@
    ```sh
    pip install -r requirements.txt
    ```
+   **Or for UV users:**
+    *UV must be installed. (can be installed via `pip install uv`)*
+   ```sh
+   uv sync
+   ``` 
 3. **Install Node.js dependencies (for Playwright MCP server):**
    ```sh
    cd mcp && npm install && cd ..
