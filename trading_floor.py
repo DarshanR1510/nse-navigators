@@ -140,43 +140,40 @@ class TradingFloor:
                 time.sleep(1800)
 
     async def shutdown(self):
-        logger.info("Initiating graceful shutdown...")
+        logger.info("Initiating immediate shutdown...")
         self.stop_event.set()
-        
-        if self.watcher_thread and self.watcher_thread.is_alive():
-            self.watcher_thread.join(timeout=5)
-            
-        # Close connections
+        # Skip joining watcher_thread to avoid delay
         for pm in position_managers.values():
-            await pm.close()
-        await self.stop_loss_manager.close()
-        
+            try:
+                await pm.close()
+            except Exception as e:
+                logger.error(f"Error closing position manager: {e}")
+        if self.stop_loss_manager:
+            try:
+                await self.stop_loss_manager.close()
+            except Exception as e:
+                logger.error(f"Error closing stop loss manager: {e}")
         logger.info("Shutdown complete")
 
     def run(self):
         logger.info(f"Starting scheduler to run every {RUN_EVERY_N_MINUTES} minutes")
-
         self.watcher_thread = threading.Thread(
             target=self._run_stop_loss_watcher, 
             daemon=True
         )
         self.watcher_thread.start()
-
-        def handle_exit(signum, frame):
-            logger.info("Handling exit signal...")
-            asyncio.run(self.shutdown())
-            sys.exit(0)
-
-        signal.signal(signal.SIGINT, handle_exit)
-        signal.signal(signal.SIGTERM, handle_exit)
-
         try:
-            asyncio.run(self.periodic_main_workflow())
-        except Exception as e:
-            logger.error(f"Fatal error in main loop: {e}")
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self.periodic_main_workflow())
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Immediate termination requested")
+            self.stop_event.set()
+            loop.run_until_complete(self.shutdown())
+            loop.close()
         finally:
-            logger.info("Shutting down gracefully...")
-            asyncio.run(self.shutdown())
+            logger.info("TradingFloor terminated")
+
 
 if __name__ == "__main__":
     trading_floor = TradingFloor()

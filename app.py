@@ -1,6 +1,5 @@
 from utils.util import css, js, Color
-from trading_floor import trader_names, lastnames
-from trading_floor import TradingFloor
+from trading_floor import trader_names, lastnames, TradingFloor
 from data.accounts import Account
 from data.database import DatabaseQueries
 import gradio as gr
@@ -163,7 +162,7 @@ class Trader:
             rows = []
 
             with data_lock:
-                for symbol, quantity in holdings.items():
+                for symbol, quantity in holdings.items():                    
                     ltp = live_prices.get(symbol, {}).get("LTP", 0.0)
                     prev_ltp = live_prices.get(symbol, {}).get("prev_LTP", ltp)                    
                     entry_price = active_positions.get(symbol, {}).get('entry_price', 0.0)
@@ -372,15 +371,15 @@ class Trader:
         
         
         if status == "Monitoring": 
-            status_text = "Agent is idle and keeping watch at the current market" 
+            status_text = "Trader is idle and keeping watch at the current market" 
         elif status == "researching":
-            status_text = "Agent is researching the market for new opportunities"
+            status_text = "Trader is researching the market for new opportunities"
         elif status == "analyzing":
-            status_text = "Agent is performing fundamental and technical analysis on selected stocks"
+            status_text = "Trader is performing analysis on selected stocks"
         elif status == "deciding":
-            status_text = "Agent is thinking on the best course of action based on analysis"
+            status_text = "Trader is selecting best stock based on analysis"
         elif status == "executing":
-            status_text = "Agent is executing trades based on the strategy"
+            status_text = "Trader is executing trades based on the strategy"
         elif status == "error":
             status_text = "Agent encountered an error and going back to monitoring"
         else: 
@@ -391,7 +390,7 @@ class Trader:
         if status != "Monitoring":
             spinner = f"""
             <div class="spinner" style="display:inline-block;margin-right:12px;">
-                <div style="width:12px;height:12px;background:{color};border-radius:30%;
+                <div style="width:12px;height:12px;background:{color};border-radius:50%;
                         animation:pulse 1s infinite;"></div>
             </div>
             """

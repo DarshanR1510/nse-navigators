@@ -75,6 +75,11 @@ body::before {
     100% { opacity: 1; }
 }
 
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* -------- HEADERS / TYPOGRAPHY -------- */
 .card-header {
     background: rgba(33,33,33,0.5) 100% !important;
@@ -208,6 +213,173 @@ span {
 /* -------- HIDE FOOTER -------- */
 footer {
     display: none !important;
+}
+
+/* -------- ENHANCED CONTROL BUTTON STYLES -------- */
+.control-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 16px !important;
+    padding: 16px 32px !important;
+    font-size: 18px !important;
+    font-family: 'gt-planar', sans-serif !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    margin: 8px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    min-width: 240px !important;
+    height: 60px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.control-button::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+    transition: left 0.5s !important;
+}
+
+.control-button:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow: 0 12px 48px rgba(102, 126, 234, 0.4) !important;
+    background: linear-gradient(135deg, #7c8df4 0%, #8a5db8 100%) !important;
+}
+
+.control-button:hover::before {
+    left: 100% !important;
+}
+
+.control-button:active {
+    transform: translateY(-1px) scale(0.98) !important;
+    transition: all 0.1s !important;
+}
+
+/* Start Button Specific Styles */
+.control-button:not(.stop-button) {
+    background: linear-gradient(135deg, #00dbde 0%, #fc00ff 50%, #00dbde 100%) !important;
+    background-size: 300% 300% !important;
+    animation: gradientShift 3s ease infinite !important;
+    box-shadow: 0 8px 32px rgba(0, 219, 222, 0.3) !important;
+}
+
+.control-button:not(.stop-button):hover {
+    background: linear-gradient(135deg, #1ae5e8 0%, #ff1aff 50%, #1ae5e8 100%) !important;
+    background-size: 300% 300% !important;
+    box-shadow: 0 12px 48px rgba(0, 219, 222, 0.5) !important;
+    animation: gradientShift 1.5s ease infinite !important;
+}
+
+/* Stop Button Specific Styles */  
+.stop-button {
+    background: linear-gradient(135deg, #ff416c 0%, #ff1744 50%, #ff416c 100%) !important;
+    background-size: 300% 300% !important;
+    animation: gradientShift 2s ease infinite !important;
+    box-shadow: 0 8px 32px rgba(255, 65, 108, 0.3) !important;
+}
+
+.stop-button:hover {
+    background: linear-gradient(135deg, #ff5177 0%, #ff2955 50%, #ff5177 100%) !important;
+    background-size: 300% 300% !important;
+    box-shadow: 0 12px 48px rgba(255, 65, 108, 0.5) !important;
+    animation: gradientShift 1s ease infinite !important;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* -------- STATUS MESSAGES -------- */
+.status-message {
+    padding: 16px 24px !important;
+    border-radius: 12px !important;
+    margin: 12px 0 !important;
+    font-family: 'gt-planar', sans-serif !important;
+    font-weight: 500 !important;
+    font-size: 16px !important;
+    text-align: center !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.3s ease !important;
+}
+
+.status-message.success {
+    background: rgba(76, 175, 80, 0.2) !important;
+    color: #81c784 !important;
+    border-color: rgba(76, 175, 80, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.15) !important;
+}
+
+.status-message.error {
+    background: rgba(244, 67, 54, 0.2) !important;
+    color: #ef5350 !important;
+    border-color: rgba(244, 67, 54, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(244, 67, 54, 0.15) !important;
+}
+
+.status-message.info {
+    background: rgba(33, 150, 243, 0.2) !important;
+    color: #64b5f6 !important;
+    border-color: rgba(33, 150, 243, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(33, 150, 243, 0.15) !important;
+}
+
+/* -------- ENHANCED AGENT STATUS -------- */
+.agent-status {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    backdrop-filter: blur(8px) !important;
+    transition: all 0.3s ease !important;
+}
+
+.agent-status:hover {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* -------- RESPONSIVE DESIGN -------- */
+@media (max-width: 768px) {
+    .control-button {
+        min-width: 200px !important;
+        height: 50px !important;
+        font-size: 16px !important;
+        padding: 12px 24px !important;
+    }
+    
+    .status-message {
+        font-size: 14px !important;
+        padding: 12px 16px !important;
+    }
+}
+
+/* -------- CONTROL PANEL STYLING -------- */
+.gr-group {
+    background: rgba(24, 26, 27, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* -------- ENHANCED HOVER EFFECTS -------- */
+.gr-group:hover {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
 }
 """
 

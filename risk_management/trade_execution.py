@@ -126,7 +126,7 @@ def execute_buy(
                 "status": "executed"
             }
             agent_memory.log_trade(trade_details)
-            DatabaseQueries.write_log(trader_name, "account", f"Bought {quantity} of {symbol}")
+            DatabaseQueries.write_log(trader_name, "account", f"Bought {quantity} of {symbol} @ {entry_price}")
 
         except Exception as e:
             print(f"[WARN] Could not log buy trade to agent memory: {e}")
@@ -136,6 +136,7 @@ def execute_buy(
         for trader_name in trader_names:
             account = Account.get(trader_name)
             all_symbols.update(account.get_holdings().keys())
+        
         new_instruments = {symbol: get_security_id(symbol) for symbol in all_symbols}
         
         update_instruments(new_instruments)

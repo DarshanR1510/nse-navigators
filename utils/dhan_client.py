@@ -29,3 +29,16 @@ def dhan_feed(symbols: list[tuple[int, str]]) -> marketfeed.DhanFeed:
 #     )
 
 # print(bbox)
+
+# try:
+#     data = dhan_feed([
+#         (marketfeed.NSE, "1333")
+#     ])
+#     while True:
+#         data.run_forever()
+#         response = data.get_data()
+#         print(response)
+
+# except Exception as e:
+#     print(e)
+
