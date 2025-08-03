@@ -669,7 +669,12 @@ def create_ui():
 if __name__ == "__main__":
     fonts = os.path.abspath("static/fonts")
     ui = create_ui()
+    
+    # Launch with share=True to get public URL
+    print("🚀 Starting NSE Navigators...")
+    print("⏳ Generating public link...")
+    
     ui.launch(
-        inbrowser=True,
-        allowed_paths=[fonts] 
+        inbrowser=False,                           
+        allowed_paths=[fonts],        
     )
