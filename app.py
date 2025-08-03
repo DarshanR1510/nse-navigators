@@ -1,6 +1,5 @@
 from utils.util import css, js, Color
-from trading_floor import trader_names, lastnames
-from trading_floor import TradingFloor
+from trading_floor import trader_names, lastnames, TradingFloor
 from data.accounts import Account
 from data.database import DatabaseQueries
 import gradio as gr
@@ -10,8 +9,9 @@ import numpy as np
 import os
 import threading
 from dotenv import load_dotenv
+
 from memory.agent_memory import AgentMemory
-from market_tools.market import get_security_id
+from market_tools.market import get_security_id, get_prices_with_cache, is_market_open
 from market_tools.live_prices import live_prices, data_lock, run_websocket_listener, update_instruments
 
 load_dotenv()
@@ -27,6 +27,7 @@ mapper = {
 }
 
 all_symbols = set()
+open_status = is_market_open()
 
 for trader_name in trader_names:
     account = Account.get(trader_name)
@@ -78,6 +79,21 @@ def df_to_native(df: pd.DataFrame) -> pd.DataFrame:
         df_copy.index = df_copy.index.to_list()
     
     return df_copy
+
+def get_market_status_html():
+    open_status = is_market_open()
+    color = "limegreen" if open_status else "#ff0000"
+    text = "Market Open" if open_status else "Market Closed"
+    return f"""
+    <div style="font-weight:bold; color:{color}; font-size:16px; font-family: monospace; user-select:none; display: flex; justify-content: flex-end; align-items: center;">
+        ● {text}
+    </div>
+    """
+
+
+def get_market_dependent_refresh_interval():
+    """Return refresh interval based on market status - 2 seconds if open, 5 minutes if closed"""
+    return 2 if is_market_open() else 300
 
 
 class Trader:
@@ -160,23 +176,26 @@ class Trader:
             
             agent_memory = AgentMemory(self.name)
             active_positions = agent_memory.get_active_positions() or {}    
-            rows = []
+            rows = []          
 
-            with data_lock:
+            market_open = is_market_open()
+
+            if not market_open:
+                # Market closed: fetch all prices in batch
+                symbols = list(holdings.keys())
+                ltp_for_all_symbols = get_prices_with_cache(symbols)
+
                 for symbol, quantity in holdings.items():
-                    ltp = live_prices.get(symbol, {}).get("LTP", 0.0)
-                    prev_ltp = live_prices.get(symbol, {}).get("prev_LTP", ltp)                    
+                    ltp = ltp_for_all_symbols.get(symbol, 0.0)
+                    print(f"Fetched LTP for {symbol}: {ltp}")
                     entry_price = active_positions.get(symbol, {}).get('entry_price', 0.0)
 
-                    pnl = ((ltp - entry_price) / entry_price) * 100
+                    pnl = ((ltp - entry_price) / entry_price) * 100 if entry_price > 0 else 0.0
                     pnl_color = mapper.get("function").value if pnl >= 0 else mapper.get("error").value
                     pnl_html = f"<span style='color:{pnl_color};'>{pnl:.2f}%</span>"
-                    
-                    color = mapper.get("function").value if ltp > prev_ltp else (
-                        mapper.get("error").value 
-                    )
 
-                    price_html = f"<span style='color:{color};'>{float(ltp):.2f}</span>"
+                    price_html = f"{ltp:.2f}"
+
                     rows.append(
                         f"<tr>"
                         f"<td>{symbol}</td>"
@@ -186,6 +205,32 @@ class Trader:
                         f"<td>{pnl_html}</td>"
                         f"</tr>"
                     )
+
+            else: 
+                with data_lock:
+                    for symbol, quantity in holdings.items():                    
+                        ltp = live_prices.get(symbol, {}).get("LTP", 0.0)
+                        prev_ltp = live_prices.get(symbol, {}).get("prev_LTP", ltp)                    
+                        entry_price = active_positions.get(symbol, {}).get('entry_price', 0.0)                    
+
+                        pnl = ((ltp - entry_price) / entry_price) * 100
+                        pnl_color = mapper.get("function").value if pnl >= 0 else mapper.get("error").value
+                        pnl_html = f"<span style='color:{pnl_color};'>{pnl:.2f}%</span>"
+                        
+                        color = mapper.get("function").value if ltp > prev_ltp else (
+                            mapper.get("error").value 
+                        )
+
+                        price_html = f"<span style='color:{color};'>{float(ltp):.2f}</span>"
+                        rows.append(
+                            f"<tr>"
+                            f"<td>{symbol}</td>"
+                            f"<td>{int(quantity)}</td>"
+                            f"<td>{float(entry_price):.2f}</td>"
+                            f"<td>{price_html}</td>"
+                            f"<td>{pnl_html}</td>"
+                            f"</tr>"
+                        )
 
             # Pad to 5 rows if needed
             while len(rows) < 5:
@@ -372,15 +417,15 @@ class Trader:
         
         
         if status == "Monitoring": 
-            status_text = "Agent is idle and keeping watch at the current market" 
+            status_text = "Trader is idle and keeping watch at the current market" 
         elif status == "researching":
-            status_text = "Agent is researching the market for new opportunities"
+            status_text = "Trader is researching the market for new opportunities"
         elif status == "analyzing":
-            status_text = "Agent is performing fundamental and technical analysis on selected stocks"
+            status_text = "Trader is performing analysis on selected stocks"
         elif status == "deciding":
-            status_text = "Agent is thinking on the best course of action based on analysis"
+            status_text = "Trader is selecting best stock based on analysis"
         elif status == "executing":
-            status_text = "Agent is executing trades based on the strategy"
+            status_text = "Trader is executing trades based on the strategy"
         elif status == "error":
             status_text = "Agent encountered an error and going back to monitoring"
         else: 
@@ -391,7 +436,7 @@ class Trader:
         if status != "Monitoring":
             spinner = f"""
             <div class="spinner" style="display:inline-block;margin-right:12px;">
-                <div style="width:12px;height:12px;background:{color};border-radius:30%;
+                <div style="width:12px;height:12px;background:{color};border-radius:50%;
                         animation:pulse 1s infinite;"></div>
             </div>
             """
@@ -491,17 +536,18 @@ class TraderView:
                 )                        
 
             
-        # Timers for updates
-        timer = gr.Timer(value=10)
-        timer.tick(
-            fn=self.refresh_all, 
+        # Timer for market-dependent data (portfolio, chart, transactions) - 2sec if market open, 5min if closed
+        market_data_timer = gr.Timer(value=get_market_dependent_refresh_interval())
+        market_data_timer.tick(
+            fn=self.refresh_market_dependent_data, 
             inputs=[], 
             outputs=[self.portfolio_value, self.chart, self.transactions_table], 
             show_progress="hidden", 
             queue=False
         )
 
-        holdings_timer = gr.Timer(value=2) 
+        # Timer for market-dependent holdings and metrics - 2sec if market open, 5min if closed
+        holdings_timer = gr.Timer(value=get_market_dependent_refresh_interval()) 
         holdings_timer.tick(
             fn=lambda: (
                 self.trader.get_holdings_html(),
@@ -513,6 +559,7 @@ class TraderView:
             queue=False
         )
         
+        # Timer for logs - always runs every 2 seconds regardless of market status
         log_timer = gr.Timer(value=2)
         log_timer.tick(
             fn=self.trader.get_logs, 
@@ -522,6 +569,7 @@ class TraderView:
             queue=False
         )
 
+        # Timer for status - always runs every 2 seconds regardless of market status
         status_timer = gr.Timer(value=2)
         status_timer.tick(
             fn=self.trader.get_agent_status,
@@ -531,8 +579,8 @@ class TraderView:
             queue=False
         )
 
-    def refresh_all(self):
-        """Refresh all components that need live updates"""
+    def refresh_market_dependent_data(self):
+        """Refresh market-dependent data (portfolio value, chart, transactions)"""
         try:
             return (
                 self.trader.get_portfolio_value(),
@@ -540,11 +588,10 @@ class TraderView:
                 self.trader.get_transactions_df()
             )
         except Exception as e:
-            print(f"Error in refresh_all: {e}")
+            print(f"Error in refresh_market_dependent_data: {e}")
             return [
                 "<div style='text-align: center;'>Error loading portfolio value</div>",
                 px.line(title="Error loading chart"),
-                "<div>Error loading holdings</div>",
                 pd.DataFrame(columns=["Timestamp", "Symbol", "Quantity", "Price", "Rationale"])
             ]
 
@@ -569,18 +616,33 @@ def create_ui():
     ) as ui:
         
         # Header section
-        gr.HTML("""
-            <div style='text-align:center;margin-bottom:5px;'>
-                <h1 style='font-size:42px;margin-bottom:10px;background: linear-gradient(90deg, #00dbde, #fc00ff);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;'>
-                    NSE NAVIGATORS
-                </h1>
-                <p style='color:#aaa;font-size:18px;'>
-                    Real-time monitoring of AI trading agents
-                </p>
-            </div>
-        """)
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.HTML("")  # Empty space
+            with gr.Column(scale=2):
+                gr.HTML("""
+                    <div style='text-align:center;margin-bottom:5px;'>
+                        <h1 style='font-size:42px;margin-bottom:10px;background: linear-gradient(90deg, #00dbde, #fc00ff);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;'>
+                            NSE NAVIGATORS
+                        </h1>
+                        <p style='color:#aaa;font-size:18px;'>
+                            Real-time monitoring of AI trading agents
+                        </p>
+                    </div>
+                """)
+            with gr.Column(scale=1):
+                market_status = gr.HTML(get_market_status_html(), elem_id="market-status")
+
+            market_status_timer = gr.Timer(value=300)
+            market_status_timer.tick(
+                fn=get_market_status_html,
+                inputs=[],
+                outputs=[market_status],
+                show_progress=False,
+                queue=False
+            )
         
         # Main content grid
         with gr.Row():
