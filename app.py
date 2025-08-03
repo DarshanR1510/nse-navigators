@@ -92,8 +92,8 @@ def get_market_status_html():
 
 
 def get_market_dependent_refresh_interval():
-    """Return refresh interval based on market status - 2 seconds if open, 5 minutes if closed"""
-    return 2 if is_market_open() else 300
+    """Return refresh interval based on market status - 5 seconds if open, 5 minutes if closed"""
+    return 5 if is_market_open() else 300
 
 
 class Trader:
@@ -186,8 +186,7 @@ class Trader:
                 ltp_for_all_symbols = get_prices_with_cache(symbols)
 
                 for symbol, quantity in holdings.items():
-                    ltp = ltp_for_all_symbols.get(symbol, 0.0)
-                    print(f"Fetched LTP for {symbol}: {ltp}")
+                    ltp = ltp_for_all_symbols.get(symbol, 0.0)                    
                     entry_price = active_positions.get(symbol, {}).get('entry_price', 0.0)
 
                     pnl = ((ltp - entry_price) / entry_price) * 100 if entry_price > 0 else 0.0
@@ -675,6 +674,7 @@ if __name__ == "__main__":
     print("⏳ Generating public link...")
     
     ui.launch(
-        inbrowser=False,                           
+        inbrowser=False,    
+        share=True,                       
         allowed_paths=[fonts],        
     )

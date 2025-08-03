@@ -31,6 +31,8 @@ Thumbs.db
 *.db-shm
 *.db-wal
 *.csv
+*.yaml
+*.sh
 
 #utils
 utils/refine_script_master.py
